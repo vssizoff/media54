@@ -81,7 +81,6 @@ function formatTime(seconds: number): string {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 20px 0;
 
   .playerMain {
     display: flex;

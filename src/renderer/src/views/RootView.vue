@@ -3,6 +3,7 @@ import {onMounted, ref} from "vue";
 import {Accordion, AccordionContent, AccordionHeader, AccordionPanel, Button, InputText} from "primevue";
 import AudioPlayer from "@renderer/components/players/AudioPlayer.vue";
 import addIcon from "@renderer/assets/add.svg";
+import textIcon from "@renderer/assets/text.svg";
 import type {MediaFile, UploadedFile} from "@renderer/types.js";
 import * as mm from "music-metadata";
 import VideoPlayer from "@renderer/components/players/VideoPlayer.vue";
@@ -38,6 +39,19 @@ async function addFile() {
     };
     return {type, file, path, filename, playing: false, editing: false, title: filename};
   }));
+}
+
+function addLabel() {
+  mediaFiles.value.push({
+    type: "label",
+    title: "label",
+    file: "",
+    path: "",
+    filename: "",
+    playing: false,
+    editing: false,
+    meta: undefined
+  });
 }
 
 function openPresentation(index: number) {
@@ -92,6 +106,7 @@ function block() {
     <div class="media">
       <div class="add">
         <Button @click="addFile"><img :src="addIcon"></Button>
+        <Button @click="addLabel"><img :src="textIcon"></Button>
       </div>
       <Accordion class="tracks" v-model:value="openedFiles" multiple>
         <AccordionPanel
@@ -116,33 +131,35 @@ function block() {
             </template>
           </AccordionHeader>
           <AccordionContent>
-            <AudioPlayer
-                v-if="type === 'audio'"
-                draggable="false"
-                :src="file"
-                :meta="meta"
-                v-model:playing="mediaFiles[index].playing"
-                @disableDrag="disableDrag"
-            />
-            <VideoPlayer
-                v-if="type === 'video'"
-                draggable="false"
-                :src="file"
-                :meta="meta"
-                v-model:playing="mediaFiles[index].playing"
-                @disableDrag="disableDrag"
-                :opened="openedSlide === index"
-                @open="openedSlide = index"
-            />
-            <ImagePlayer
-                v-if="type === 'image'"
-                draggable="false"
-                :src="file"
-                v-model:playing="mediaFiles[index].playing"
-                @disableDrag="disableDrag"
-                :opened="openedSlide === index"
-                @open="openedSlide = index"
-            />
+            <div class="players">
+              <AudioPlayer
+                  v-if="type === 'audio'"
+                  draggable="false"
+                  :src="file"
+                  :meta="meta"
+                  v-model:playing="mediaFiles[index].playing"
+                  @disableDrag="disableDrag"
+              />
+              <VideoPlayer
+                  v-if="type === 'video'"
+                  draggable="false"
+                  :src="file"
+                  :meta="meta"
+                  v-model:playing="mediaFiles[index].playing"
+                  @disableDrag="disableDrag"
+                  :opened="openedSlide === index"
+                  @open="openedSlide = index"
+              />
+              <ImagePlayer
+                  v-if="type === 'image'"
+                  draggable="false"
+                  :src="file"
+                  v-model:playing="mediaFiles[index].playing"
+                  @disableDrag="disableDrag"
+                  :opened="openedSlide === index"
+                  @open="openedSlide = index"
+              />
+            </div>
           </AccordionContent>
         </AccordionPanel>
       </Accordion>
@@ -166,7 +183,7 @@ main {
   height: 100%;
 
   .media {
-    width: 80%;
+    width: 70%;
     margin-right: 10px;
 
     .add {
@@ -203,7 +220,7 @@ main {
   height: 100%;
   border-radius: 40px;
   padding: 10px;
-  width: 20%;
+  width: 30%;
 
   ul {
     margin: 20px 0;
@@ -225,12 +242,16 @@ main {
   border-radius: 30px;
   overflow: hidden;
 }
+
+.players {
+  padding: 10px 20px 20px 20px;
+}
 </style>
 
 <style>
-/*:root {
-  --p-accordion-transition-duration: 1s !important;
-}*/
+:root {
+  --p-accordion-content-padding: 0 !important;
+}
 
 .p-accordioncontent {
   transition-duration: .8s !important;
