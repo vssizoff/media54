@@ -23,7 +23,10 @@ function createPresentationWindow(screenId: number): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      nodeIntegration: true,
+      contextIsolation: false,
+      webSecurity: false
     },
     title: "Media54 presentation"
   })
@@ -105,6 +108,12 @@ function createWindow(): void {
   }
 }
 
+const supportedFormats = {
+  audio: ['mp3', 'wav', 'ogg'],
+  video: ['mp4', 'mkv', 'mov', 'avi'],
+  image: ['svg', 'ico', 'jpg', 'png', 'jpeg', 'gif', 'bmp', 'tiff', 'avif']
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -134,96 +143,33 @@ app.whenReady().then(() => {
     const { dialog } = await import('electron');
     return await Promise.all((await dialog.showOpenDialog({
       properties: ["openFile", "multiSelections"],
-      filters: [{ name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg'] }]
-    })).filePaths.map(async path => ({
-      file: pathToFileURL(path).href,
-      meta: (await mm.parseFile(path)).common,
-      path,
-      filename: Path.parse(path).name + Path.parse(path).ext
-    })));
+      filters: [
+        {name: 'All supported formats', extensions: [...supportedFormats.audio, ...supportedFormats.video, ...supportedFormats.image]},
+        {name: 'Audio Files', extensions: supportedFormats.audio},
+        {name: 'Video Files', extensions: supportedFormats.video},
+        {name: 'Image Files', extensions: supportedFormats.image},
+        {name: 'All files', extensions: ['*']}
+      ]
+    })).filePaths.map(async path => {
+      let ext = Path.parse(path).ext.substring(1).toLowerCase();
+      return {
+        type: supportedFormats.audio.includes(ext) ? "audio" :
+            supportedFormats.video.includes(ext) ? "video" :
+            supportedFormats.image.includes(ext) ? "image" : "other",
+        file: pathToFileURL(path).href,
+        meta: [...supportedFormats.audio, ...supportedFormats.video].includes(ext)
+            ? (await mm.parseFile(path)).common : undefined,
+        path,
+        filename: Path.parse(path).name + Path.parse(path).ext
+      };
+    }));
   });
 
-  // ipcMain.on("selectFile", async event => {
-  //   let file = await dialog.showOpenDialog({
-  //     properties: ['openFile'],
-  //     title: "Выберите XLSX таблицу",
-  //     filters: [
-  //       {name: 'Excel Files', extensions: ["xlsx"]},
-  //       {name: 'All Files', extensions: ["*"]}
-  //     ],
-  //   });
-  //   if (file.canceled) return;
-  //   setEmails(file.filePaths[0], event.sender);
-  // });
-  //
-  // ipcMain.handle("sendAll", async event => {
-  //   await sendEmails(event.sender);
-  // });
-  //
-  // ipcMain.handle("send", async (event, email: string) => {
-  //   await sendEmail(email, event.sender);
-  // });
-  //
-  // ipcMain.handle("rmAll", event => {
-  //   rmAll(event.sender);
-  // });
-  //
-  // ipcMain.handle("rm", (event, email: string) => {
-  //   rm(email, event.sender);
-  // });
-  //
-  // ipcMain.handle("getEmails", () => {
-  //   return getEmails();
-  // });
-  //
-  // ipcMain.handle("addEmail", (event, entry: EmailConfig) => {
-  //   addEmail(entry, event.sender);
-  // });
-  //
-  // ipcMain.handle("removeEmail", (event, index: number) => {
-  //   removeEmail(index, event.sender);
-  // });
-  //
-  // ipcMain.handle("editEmail", (event, index: number, entry: EmailConfig) => {
-  //   editEmail(index, entry, event.sender);
-  // });
-  //
-  // ipcMain.handle("selectEmail", (event, index: number) => {
-  //   selectEmail(index, event.sender);
-  // });
-  //
-  // ipcMain.handle("getTemplate", (_, index: number) => {
-  //   return getTemplate(index);
-  // });
-  //
-  // ipcMain.handle("getTemplates", () => {
-  //   return getTemplates();
-  // });
-  //
-  // ipcMain.handle("addTemplate", (event, name: string, sender: string, subject: string, data: string) => {
-  //   addTemplate(name, sender, subject, data, event.sender);
-  // });
-  //
-  // ipcMain.handle("removeTemplate", (event, index: number) => {
-  //   removeTemplate(index, event.sender);
-  // });
-  //
-  // ipcMain.handle("editTemplate", (event, index: number, name: string, sender: string, subject: string, data: string) => {
-  //   editTemplate(index, name, sender, subject, data, event.sender);
-  // });
-  //
-  // ipcMain.handle("selectTemplate", (event, index: number) => {
-  //   selectTemplate(index, event.sender);
-  // });
-  //
-  // ipcMain.on("readFile", async (_, title: string, filters: Array<FileFilter>) => {
-  //   let file = await dialog.showOpenDialog({
-  //     properties: ['openFile'],
-  //     title, filters
-  //   });
-  //   if (file.canceled) return;
-  //   return fs.readFileSync(file.filePaths[0]);
-  // });
+  ipcMain.handle("slide", (_, ...data) => {
+    secondaryWindows.forEach(window => {
+      if (!window.isDestroyed()) window.webContents.send("slide", ...data)
+    });
+  });
 
   createWindow()
 

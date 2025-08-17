@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {type PropType, ref, watch} from "vue";
 import * as mm from "music-metadata";
-import Player from "@renderer/components/Player.vue";
+import Player from "@renderer/components/players/Player.vue";
 
 const props = defineProps({
   src: {
@@ -12,12 +12,14 @@ const props = defineProps({
     type: Object as PropType<mm.ICommonTagsResult>,
     required: true
   },
-  playing: Boolean
+  playing: Boolean,
+  opened: Boolean
 });
 
 const emit = defineEmits<{
   (e: "update:playing", arg: boolean): void
   (e: "disableDrag"): void
+  (e: "open"): void
 }>();
 
 const audioRef = ref<HTMLAudioElement | null>(null)
@@ -25,10 +27,33 @@ const currentTime = ref(0)
 const duration = ref(0)
 const volume = ref(1)
 
-watch(props, value => {
-  if (value.playing) audioRef.value?.play();
-  else audioRef.value?.pause();
-});
+// watch(props, (value, oldValue) => {
+//
+// });
+
+function updatePlaying(playing: boolean) {
+  emit('update:playing', playing);
+  if (playing) {
+    audioRef.value?.play();
+    if (props.opened) {
+      window.electron.ipcRenderer.invoke("slide", {type: "resume"});
+    }
+    else {
+      window.electron.ipcRenderer.invoke("slide", {
+        type: "open",
+        file: props.src,
+        timecode: currentTime.value,
+        fileType: "video"
+      });
+      console.log("open");
+      emit("open");
+    }
+  }
+  else {
+    audioRef.value?.pause();
+    if (props.opened) window.electron.ipcRenderer.invoke("slide", {type: "pause"});
+  }
+}
 
 watch(volume, value => {
   if (audioRef.value) audioRef.value.volume = value;
@@ -45,6 +70,10 @@ function onLoadedMetadata() {
 function seek(value: number) {
   if (audioRef.value) {
     audioRef.value.currentTime = value;
+    if (props.opened) window.electron.ipcRenderer.invoke("slide", {
+      type: "seek",
+      timecode: value,
+    });
   }
 }
 
@@ -86,7 +115,7 @@ function fadeOutPause(left: number = 1000, volume0 = volume.value) {
     <Player
         v-if="props.src"
         :playing="props.playing"
-        @update:playing="emit('update:playing', $event)"
+        @update:playing="updatePlaying($event)"
         :currentTime="currentTime"
         @update:currentTime="seek"
         :duration="duration"

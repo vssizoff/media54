@@ -1,34 +1,41 @@
 <script setup lang="ts">
 import {onMounted, ref} from "vue";
 import {Accordion, AccordionContent, AccordionHeader, AccordionPanel, Button, InputText} from "primevue";
-import AudioPlayer from "@renderer/components/AudioPlayer.vue";
+import AudioPlayer from "@renderer/components/players/AudioPlayer.vue";
 import addIcon from "@renderer/assets/add.svg";
+import type {MediaFile, UploadedFile} from "@renderer/types.js";
 import * as mm from "music-metadata";
+import VideoPlayer from "@renderer/components/players/VideoPlayer.vue";
+import ImagePlayer from "@renderer/components/players/ImagePlayer.vue";
+import blockIcon from "@renderer/assets/stop.svg";
 
 const displays = ref<Array<string>>([]);
-const mediaFiles = ref<Array<{
-  file: string,
-  meta: mm.ICommonTagsResult,
-  playing: boolean,
-  title: string,
-  editing: boolean
-}>>([]);
+const mediaFiles = ref<Array<MediaFile>>([]);
 const openedFiles = ref<Array<number>>([]);
 const openingMap = ref(new Map<number, Array<NodeJS.Timeout>>);
 const dragItemIndex = ref<number | null>(null);
 const isDraggingEnabled = ref<boolean>(false);
+const openedSlide = ref<number>(-1);
 
 onMounted(async () => {
   displays.value = (await window.electron.ipcRenderer.invoke("displays")).map(({label}) => label);
 });
 
+function getTitle(filename: string, meta: mm.ICommonTagsResult | undefined): string {
+  if (meta === undefined) return filename;
+  return `${filename} ${meta?.artists?.join(", ") ?? meta?.artist ?? meta?.albumartist ?? "unknown"}: ${meta?.title ?? "unknown"}`;
+}
+
 async function addFile() {
-  const files = await window.electron.ipcRenderer.invoke("open");
+  const files: Array<UploadedFile> = await window.electron.ipcRenderer.invoke("open");
   console.log(files);
-  mediaFiles.value.push(...files.map(({file, meta, filename}: {file: string, meta: mm.ICommonTagsResult, filename: string}) => ({
-    file, meta, playing: false, editing: false,
-    title: `${filename} ${meta.artists?.join(", ") ?? meta.artist ?? meta.albumartist}: ${meta.title}`
-  })));
+  mediaFiles.value.push(...files.map(({type, file, path, filename, meta}) => {
+    if (type === "audio" || type === "video") return {
+      type, file, path, meta, filename, playing: false, editing: false,
+      title: getTitle(filename, meta)
+    };
+    return {type, file, path, filename, playing: false, editing: false, title: filename};
+  }));
 }
 
 function openPresentation(index: number) {
@@ -71,6 +78,11 @@ function disableDrag() {
     isDraggingEnabled.value = true
   }, 100)
 }
+
+function block() {
+  openedSlide.value = -1;
+  window.electron.ipcRenderer.invoke("slide", {type: "close"});
+}
 </script>
 
 <template>
@@ -79,7 +91,7 @@ function disableDrag() {
       <Button @click="addFile"><img :src="addIcon"></Button>
       <Accordion v-model:value="openedFiles" multiple>
         <AccordionPanel
-            v-for="({file, meta, title, editing}, index) in mediaFiles"
+            v-for="({type, file, meta, title, editing}, index) in mediaFiles"
             :value="index"
             :key="file"
             draggable="true"
@@ -101,11 +113,31 @@ function disableDrag() {
           </AccordionHeader>
           <AccordionContent>
             <AudioPlayer
+                v-if="type === 'audio'"
                 draggable="false"
                 :src="file"
                 :meta="meta"
                 v-model:playing="mediaFiles[index].playing"
                 @disableDrag="disableDrag"
+            />
+            <VideoPlayer
+                v-if="type === 'video'"
+                draggable="false"
+                :src="file"
+                :meta="meta"
+                v-model:playing="mediaFiles[index].playing"
+                @disableDrag="disableDrag"
+                :opened="openedSlide === index"
+                @open="openedSlide = index"
+            />
+            <ImagePlayer
+                v-if="type === 'image'"
+                draggable="false"
+                :src="file"
+                v-model:playing="mediaFiles[index].playing"
+                @disableDrag="disableDrag"
+                :opened="openedSlide === index"
+                @open="openedSlide = index"
             />
           </AccordionContent>
         </AccordionPanel>
@@ -115,6 +147,7 @@ function disableDrag() {
       <ol>
         <li v-for="(display, index) in displays"><Button @click="openPresentation(index)">{{display}}</Button></li>
       </ol>
+      <Button><img :src="blockIcon" alt="block" @click="block"></Button>
     </div>
   </main>
 </template>
@@ -140,5 +173,19 @@ main {
 
 .save {
   margin: 10px;
+}
+</style>
+
+<style>
+/*:root {
+  --p-accordion-transition-duration: 1s !important;
+}*/
+
+.p-accordioncontent {
+  transition-duration: .8s !important;
+}
+
+body {
+  background-image: url('../assets/wavy-lines.svg');
 }
 </style>
