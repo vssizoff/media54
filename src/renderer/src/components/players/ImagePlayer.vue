@@ -2,6 +2,7 @@
 import playIcon from "@renderer/assets/play.svg";
 import stopIcon from "@renderer/assets/stop.svg";
 import {Button} from "primevue";
+import {watch} from "vue";
 
 const props = defineProps({
   src: {
@@ -10,6 +11,10 @@ const props = defineProps({
   },
   playing: Boolean,
   opened: Boolean
+});
+
+watch(props, value => {
+  if (!value.opened) emit("update:playing", false);
 });
 
 const emit = defineEmits<{
@@ -21,15 +26,14 @@ const emit = defineEmits<{
 function updatePlaying(playing: boolean) {
   emit('update:playing', playing);
   if (playing) {
+    emit("open");
     window.electron.ipcRenderer.invoke("slide", {
       type: "open",
       file: props.src,
       fileType: "image"
     });
-    console.log("open");
-    emit("open");
   }
-  else {
+  else if (props.opened) {
     window.electron.ipcRenderer.invoke("slide", {type: "close"});
   }
 }

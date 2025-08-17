@@ -64,7 +64,7 @@ function createPresentationWindow(screenId: number): void {
   secondaryWindows.push(window);
 }
 
-function createWindow(): void {
+function createWindow(): BrowserWindow {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,
@@ -106,6 +106,8 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  return mainWindow;
 }
 
 const supportedFormats = {
@@ -165,13 +167,13 @@ app.whenReady().then(() => {
     }));
   });
 
+  const mainWindow = createWindow();
+
   ipcMain.handle("slide", (_, ...data) => {
-    secondaryWindows.forEach(window => {
+    [...secondaryWindows, mainWindow].forEach(window => {
       if (!window.isDestroyed()) window.webContents.send("slide", ...data)
     });
   });
-
-  createWindow()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

@@ -8,6 +8,7 @@ import * as mm from "music-metadata";
 import VideoPlayer from "@renderer/components/players/VideoPlayer.vue";
 import ImagePlayer from "@renderer/components/players/ImagePlayer.vue";
 import blockIcon from "@renderer/assets/stop.svg";
+import Slide from "@renderer/components/Slide.vue";
 
 const displays = ref<Array<string>>([]);
 const mediaFiles = ref<Array<MediaFile>>([]);
@@ -88,8 +89,10 @@ function block() {
 <template>
   <main>
     <div class="media">
-      <Button @click="addFile"><img :src="addIcon"></Button>
-      <Accordion v-model:value="openedFiles" multiple>
+      <div class="add">
+        <Button @click="addFile"><img :src="addIcon"></Button>
+      </div>
+      <Accordion class="tracks" v-model:value="openedFiles" multiple>
         <AccordionPanel
             v-for="({type, file, meta, title, editing}, index) in mediaFiles"
             :value="index"
@@ -144,21 +147,38 @@ function block() {
       </Accordion>
     </div>
     <div class="controls">
-      <ol>
+      <Slide class="slide"/>
+      <ul>
         <li v-for="(display, index) in displays"><Button @click="openPresentation(index)">{{display}}</Button></li>
-      </ol>
-      <Button><img :src="blockIcon" alt="block" @click="block"></Button>
+      </ul>
+      <div class="buttons">
+        <Button><img :src="blockIcon" alt="block" @click="block"></Button>
+      </div>
     </div>
   </main>
 </template>
 
 <style scoped>
 main {
-  margin: 20px;
+  padding: 10px;
   display: flex;
+  height: 100%;
 
   .media {
     width: 80%;
+    margin-right: 10px;
+
+    .add {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .tracks {
+      border-radius: 30px;
+      overflow: hidden;
+    }
   }
 }
 
@@ -174,6 +194,35 @@ main {
 .save {
   margin: 10px;
 }
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  background-color: rgba(0,0,0,0.4);
+  height: 100%;
+  border-radius: 40px;
+  padding: 10px;
+
+  ul {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    padding-left: 0;
+    gap: 10px;
+
+    li button {
+      width: 100%;
+    }
+  }
+}
+
+.slide {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: black;
+  border-radius: 30px;
+  overflow: hidden;
+}
 </style>
 
 <style>
@@ -183,6 +232,16 @@ main {
 
 .p-accordioncontent {
   transition-duration: .8s !important;
+}
+
+html, body {
+  height: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+#app {
+  height: 100%;
 }
 
 body {

@@ -95,7 +95,7 @@ function fadeOutPause(left: number = 1000, volume0 = volume.value) {
   if (left <= 0) {
     volume.value = volume0;
     audioRef.value?.pause();
-    emit('update:playing', false);
+    updatePlaying(false);
     return;
   }
   volume.value = left / 1000 * volume0;
