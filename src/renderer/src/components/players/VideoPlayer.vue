@@ -82,13 +82,13 @@ const fadeTimeout = 1;
 function fadeIn(left: number = 1000, volume0 = volume.value) {
   if (left <= 0) return;
   volume.value = (1000 - left) / 1000 * volume0;
-  setTimeout(() => fadeIn(left - 1, volume0), fadeTimeout);
+  setTimeout(() => fadeIn(left - 2, volume0), fadeTimeout);
 }
 
 function fadeOut(left: number = 1000, volume0 = volume.value) {
   if (left <= 0) return;
   volume.value = left / 1000 * volume0;
-  setTimeout(() => fadeOut(left - 1, volume0), fadeTimeout);
+  setTimeout(() => fadeOut(left - 2, volume0), fadeTimeout);
 }
 
 function fadeOutPause(left: number = 1000, volume0 = volume.value) {
@@ -99,7 +99,7 @@ function fadeOutPause(left: number = 1000, volume0 = volume.value) {
     return;
   }
   volume.value = left / 1000 * volume0;
-  setTimeout(() => fadeOutPause(left - 1, volume0), fadeTimeout);
+  setTimeout(() => fadeOutPause(left - 2, volume0), fadeTimeout);
 }
 </script>
 

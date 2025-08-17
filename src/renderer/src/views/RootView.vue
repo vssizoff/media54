@@ -131,7 +131,7 @@ function block() {
             </template>
           </AccordionHeader>
           <AccordionContent>
-            <div class="players">
+            <div class="players" v-if="type != 'label' && type != 'other'">
               <AudioPlayer
                   v-if="type === 'audio'"
                   draggable="false"

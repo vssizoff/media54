@@ -44,5 +44,7 @@ function updatePlaying(playing: boolean) {
 </template>
 
 <style scoped>
-
+button {
+  margin-top: 23px;
+}
 </style>
