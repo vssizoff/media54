@@ -19,7 +19,8 @@ const isDraggingEnabled = ref<boolean>(true);
 const openedSlide = ref<number>(-1);
 
 onMounted(async () => {
-  displays.value = (await window.electron.ipcRenderer.invoke("displays")).map(({label}) => label);
+  displays.value = (await window.electron.ipcRenderer.invoke("displays")).map(({label, isPrimary, id}) =>
+      label || (isPrimary ? "Primary display" : `Display ${id}`));
 });
 
 function getTitle(filename: string, meta: mm.ICommonTagsResult | undefined): string {
@@ -202,6 +203,7 @@ main {
   height: 100%;
   border-radius: 40px;
   padding: 10px;
+  width: 20%;
 
   ul {
     margin: 20px 0;

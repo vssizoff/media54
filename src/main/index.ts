@@ -134,6 +134,7 @@ app.whenReady().then(() => {
   ipcMain.on('ping', () => console.log('pong'));
 
   ipcMain.handle("displays", () => {
+    console.log(screen.getAllDisplays());
     return screen.getAllDisplays();
   });
 

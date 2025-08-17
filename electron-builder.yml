@@ -12,12 +12,23 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: 54emailSender
+  executableName: media54
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - ia32
+    - target: portable
+      arch:
+        - x64
+        - ia32
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+portable:
+  artifactName: ${name}-${version}-portable.${ext}
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
