@@ -8,10 +8,6 @@ const props = defineProps({
     type: String,
     required: true
   },
-  meta: {
-    type: Object as PropType<mm.ICommonTagsResult>,
-    required: true
-  },
   playing: Boolean,
   opened: Boolean
 });

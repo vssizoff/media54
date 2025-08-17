@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import {onMounted, ref} from "vue";
-import {Accordion, AccordionContent, AccordionHeader, AccordionPanel, Button, InputText} from "primevue";
+import {Accordion, AccordionContent, AccordionHeader, AccordionPanel, Button, InputText, Menu} from "primevue";
 import AudioPlayer from "@renderer/components/players/AudioPlayer.vue";
 import addIcon from "@renderer/assets/add.svg";
 import textIcon from "@renderer/assets/text.svg";
-import type {MediaFile, UploadedFile} from "@renderer/types.js";
+import type {CollectionFile, MediaFile, UploadedFile} from "@renderer/types.js";
 import * as mm from "music-metadata";
 import VideoPlayer from "@renderer/components/players/VideoPlayer.vue";
 import ImagePlayer from "@renderer/components/players/ImagePlayer.vue";
@@ -18,10 +18,37 @@ const openingMap = ref(new Map<number, Array<NodeJS.Timeout>>);
 const dragItemIndex = ref<number | null>(null);
 const isDraggingEnabled = ref<boolean>(true);
 const openedSlide = ref<number>(-1);
+const menuItems = ref([
+  {
+    label: 'New',
+    command() {
+      console.log("new");
+    }
+  }
+]);
+const collectionEditing = ref(false);
+const collectionTitle = ref("New collection");
+
+function saveCollection() {
+  console.log(collectionTitle.value);
+  window.electron.ipcRenderer.invoke("saveCollection", JSON.stringify({
+    title: collectionTitle.value,
+    files: mediaFiles.value.map(({title, file, type}) => ({title, file, type}))
+  }));
+}
 
 onMounted(async () => {
   displays.value = (await window.electron.ipcRenderer.invoke("displays")).map(({label, isPrimary, id}) =>
-      label || (isPrimary ? "Primary display" : `Display ${id}`));
+    label || (isPrimary ? "Primary display" : `Display ${id}`));
+  menuItems.value.push(...(await window.electron.ipcRenderer.invoke("collections"))
+    .map(([path, title]) => ({
+      label: title,
+      async command() {
+        let {title, files}: {title: string, files: Array<CollectionFile>} = await window.electron.ipcRenderer.invoke("collection", path);
+        collectionTitle.value = title;
+        mediaFiles.value = files.map(({...file}) => ({...file, playing: false, editing: false}));
+      }
+    })));
 });
 
 function getTitle(filename: string, meta: mm.ICommonTagsResult | undefined): string {
@@ -32,13 +59,10 @@ function getTitle(filename: string, meta: mm.ICommonTagsResult | undefined): str
 async function addFile() {
   const files: Array<UploadedFile> = await window.electron.ipcRenderer.invoke("open");
   console.log(files);
-  mediaFiles.value.push(...files.map(({type, file, path, filename, meta}) => {
-    if (type === "audio" || type === "video") return {
-      type, file, path, meta, filename, playing: false, editing: false,
-      title: getTitle(filename, meta)
-    };
-    return {type, file, path, filename, playing: false, editing: false, title: filename};
+  mediaFiles.value.push(...files.map(({type, file, filename, meta}) => {
+    return {type, file, playing: false, editing: false, title: getTitle(filename, meta)};
   }));
+  saveCollection();
 }
 
 function addLabel() {
@@ -46,11 +70,8 @@ function addLabel() {
     type: "label",
     title: "label",
     file: "",
-    path: "",
-    filename: "",
     playing: false,
-    editing: false,
-    meta: undefined
+    editing: false
   });
 }
 
@@ -86,6 +107,7 @@ function handleDragOver(index: number) {
 
 function handleDrop() {
   dragItemIndex.value = null
+  saveCollection();
 }
 
 function disableDrag() {
@@ -103,14 +125,27 @@ function block() {
 
 <template>
   <main>
+    <Menu :model="menuItems"/>
     <div class="media">
-      <div class="add">
-        <Button @click="addFile"><img :src="addIcon"></Button>
-        <Button @click="addLabel"><img :src="textIcon"></Button>
+      <div class="collection">
+        <div class="collectionHeader">
+          <template v-if="!collectionEditing">
+            <span>{{collectionTitle}}</span>
+            <Button @click.prevent.stop="collectionEditing = !collectionEditing" class="save">Edit</Button>
+          </template>
+          <template v-else>
+            <InputText v-model="collectionTitle" class="titleInput"/>
+            <Button @click.prevent.stop="collectionEditing = !collectionEditing; saveCollection()" class="save">Save</Button>
+          </template>
+        </div>
+        <div class="add">
+          <Button @click="addFile"><img :src="addIcon"></Button>
+          <Button @click="addLabel"><img :src="textIcon"></Button>
+        </div>
       </div>
       <Accordion class="tracks" v-model:value="openedFiles" multiple>
         <AccordionPanel
-            v-for="({type, file, meta, title, editing}, index) in mediaFiles"
+            v-for="({type, file, title, editing}, index) in mediaFiles"
             :value="index"
             :key="file"
             draggable="true"
@@ -136,7 +171,6 @@ function block() {
                   v-if="type === 'audio'"
                   draggable="false"
                   :src="file"
-                  :meta="meta"
                   v-model:playing="mediaFiles[index].playing"
                   @disableDrag="disableDrag"
               />
@@ -144,7 +178,6 @@ function block() {
                   v-if="type === 'video'"
                   draggable="false"
                   :src="file"
-                  :meta="meta"
                   v-model:playing="mediaFiles[index].playing"
                   @disableDrag="disableDrag"
                   :opened="openedSlide === index"
@@ -184,13 +217,19 @@ main {
 
   .media {
     width: 70%;
-    margin-right: 10px;
+    margin: 0 10px;
 
-    .add {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
+    .collection {
       margin-bottom: 10px;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+
+      .add, .collectionHeader  {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
     }
 
     .tracks {

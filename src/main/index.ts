@@ -5,6 +5,8 @@ import icon from '../../resources/icon.png?asset'
 import {format, pathToFileURL} from "node:url";
 import * as mm from "music-metadata";
 import * as Path from "node:path";
+import * as fs from "node:fs";
+import {homedir} from "node:os";
 
 let secondaryWindows: Array<BrowserWindow> = [];
 
@@ -115,13 +117,24 @@ const supportedFormats = {
   video: ['mp4', 'mkv', 'mov', 'avi'],
   image: ['svg', 'ico', 'jpg', 'png', 'jpeg', 'gif', 'bmp', 'tiff', 'avif']
 }
+const DATA_DIR = Path.join(homedir(), '.media54');
+
+async function initCollection(collectionDir: string) {
+  await fs.promises.mkdir(collectionDir);
+  await fs.promises.writeFile(Path.join(collectionDir, "collection.json"), JSON.stringify({title: "New collection", file: []}), {encoding: "utf8"});
+}
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+  let collectionDir = Path.join(DATA_DIR, `${fs.readdirSync(DATA_DIR).length}`);
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
+
+  const mainWindow = createWindow();
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -144,7 +157,8 @@ app.whenReady().then(() => {
 
   ipcMain.handle("open", async () => {
     const { dialog } = await import('electron');
-    return await Promise.all((await dialog.showOpenDialog({
+    if (!fs.existsSync(collectionDir)) await initCollection(collectionDir);
+    let filePaths = (await dialog.showOpenDialog({
       properties: ["openFile", "multiSelections"],
       filters: [
         {name: 'All supported formats', extensions: [...supportedFormats.audio, ...supportedFormats.video, ...supportedFormats.image]},
@@ -153,27 +167,43 @@ app.whenReady().then(() => {
         {name: 'Image Files', extensions: supportedFormats.image},
         {name: 'All files', extensions: ['*']}
       ]
-    })).filePaths.map(async path => {
+    })).filePaths;
+    let ret: Array<any> = [];
+    for (const path of filePaths) {
       let ext = Path.parse(path).ext.substring(1).toLowerCase();
-      return {
+      let newPath = Path.join(collectionDir, `${(await fs.promises.readdir(collectionDir)).length}.${ext}`);
+      await fs.promises.cp(path, newPath);
+      ret.push({
         type: supportedFormats.audio.includes(ext) ? "audio" :
             supportedFormats.video.includes(ext) ? "video" :
-            supportedFormats.image.includes(ext) ? "image" : "other",
-        file: pathToFileURL(path).href,
+                supportedFormats.image.includes(ext) ? "image" : "other",
+        file: pathToFileURL(newPath).href,
         meta: [...supportedFormats.audio, ...supportedFormats.video].includes(ext)
             ? (await mm.parseFile(path)).common : undefined,
-        path,
+        path: newPath,
         filename: Path.parse(path).name + Path.parse(path).ext
-      };
-    }));
+      });
+    }
+    return ret;
   });
-
-  const mainWindow = createWindow();
 
   ipcMain.handle("slide", (_, ...data) => {
     [...secondaryWindows, mainWindow].forEach(window => {
       if (!window.isDestroyed()) window.webContents.send("slide", ...data)
     });
+  });
+
+  ipcMain.handle("saveCollection", async (_, collection) => {
+    if (!fs.existsSync(collectionDir)) await initCollection(collectionDir);
+    await fs.promises.writeFile(Path.join(collectionDir, "collection.json"), collection, {encoding: "utf8"});
+  });
+
+  ipcMain.handle("collections", async (_) => {
+    return Promise.all((await fs.promises.readdir(DATA_DIR)).map(collection => [Path.join(DATA_DIR, collection), Path.join(DATA_DIR, collection, "collection.json")]).map(async ([collectionDir, collection]) => [collectionDir, JSON.parse(await fs.promises.readFile(collection, {encoding: "utf8"})).title]));
+  });
+
+  ipcMain.handle("collection", async (_, collectionDir) => {
+    return JSON.parse(await fs.promises.readFile(Path.join(collectionDir, "collection.json"), {encoding: "utf8"}));
   });
 
   app.on('activate', function () {

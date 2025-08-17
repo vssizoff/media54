@@ -5,15 +5,20 @@ export type UploadedFile = {
     path: string,
     filename: string
 } & ({
-    type: "image" | "other" | "label",
+    type: "image" | "other",
     meta: undefined
 } | {
     type: "audio" | "video",
     meta: mm.ICommonTagsResult
 })
 
-export type MediaFile = (UploadedFile & {
-    playing: boolean,
+export type CollectionFile = {
     title: string,
+    type: "image" | "other" | "label" | "audio" | "video",
+    file: string,
+};
+
+export type MediaFile = CollectionFile & {
+    playing: boolean,
     editing: boolean
-})
+};
