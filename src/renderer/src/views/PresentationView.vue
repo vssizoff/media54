@@ -59,11 +59,12 @@ watch(currentTime, value => {
     <video v-if="type === 'video'" ref="videoComponent" muted>
       <source :src="src">
     </video>
+    <img v-if="type === 'image'" :src="src">
   </main>
 </template>
 
 <style scoped>
-video {
+video, img {
   width: 100vw;
   height: 100vh;
   object-fit: contain;

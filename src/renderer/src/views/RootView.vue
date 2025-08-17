@@ -14,7 +14,7 @@ const mediaFiles = ref<Array<MediaFile>>([]);
 const openedFiles = ref<Array<number>>([]);
 const openingMap = ref(new Map<number, Array<NodeJS.Timeout>>);
 const dragItemIndex = ref<number | null>(null);
-const isDraggingEnabled = ref<boolean>(false);
+const isDraggingEnabled = ref<boolean>(true);
 const openedSlide = ref<number>(-1);
 
 onMounted(async () => {
