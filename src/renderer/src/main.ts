@@ -6,6 +6,7 @@ import PrimeVue from "primevue/config";
 import Aura from "@primevue/themes/aura";
 import {router} from "@renderer/router.js";
 import {definePreset} from "@primevue/themes";
+import ConfirmationService from 'primevue/confirmationservice';
 
 const app = createApp(App);
 
@@ -18,5 +19,6 @@ app.use(PrimeVue, {
 });
 
 app.use(router);
+app.use(ConfirmationService);
 
 app.mount('#app');

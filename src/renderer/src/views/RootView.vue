@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import {onMounted, ref} from "vue";
-import {Accordion, AccordionContent, AccordionHeader, AccordionPanel, Button, InputText, Menu} from "primevue";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionHeader,
+  AccordionPanel,
+  Button,
+  InputText,
+  Menu,
+  useConfirm,
+  Badge
+} from "primevue";
 import AudioPlayer from "@renderer/components/players/AudioPlayer.vue";
 import addIcon from "@renderer/assets/add.svg";
 import textIcon from "@renderer/assets/text.svg";
@@ -28,28 +38,90 @@ const menuItems = ref([
 ]);
 const collectionEditing = ref(false);
 const collectionTitle = ref("New collection");
+const collectionPath = ref("");
 
-function saveCollection() {
+async function loadCollections() {
+  menuItems.value.splice(1);
+  menuItems.value.push(...(await window.electron.ipcRenderer.invoke("collections"))
+      .map(([path, title]) => ({
+        label: title,
+        async command() {
+          let {title, files}: {title: string, files: Array<CollectionFile>} = await window.electron.ipcRenderer.invoke("collection", path);
+          collectionTitle.value = title;
+          collectionPath.value = path;
+          mediaFiles.value = files.map(({...file}) => ({...file, playing: false, editing: false}));
+        }
+      }))
+  );
+}
+
+async function saveCollection() {
   console.log(collectionTitle.value);
-  window.electron.ipcRenderer.invoke("saveCollection", JSON.stringify({
+  collectionPath.value = await window.electron.ipcRenderer.invoke("saveCollection", JSON.stringify({
     title: collectionTitle.value,
     files: mediaFiles.value.map(({title, file, type}) => ({title, file, type}))
   }));
+  await loadCollections();
 }
 
 onMounted(async () => {
   displays.value = (await window.electron.ipcRenderer.invoke("displays")).map(({label, isPrimary, id}) =>
     label || (isPrimary ? "Primary display" : `Display ${id}`));
-  menuItems.value.push(...(await window.electron.ipcRenderer.invoke("collections"))
-    .map(([path, title]) => ({
-      label: title,
-      async command() {
-        let {title, files}: {title: string, files: Array<CollectionFile>} = await window.electron.ipcRenderer.invoke("collection", path);
-        collectionTitle.value = title;
-        mediaFiles.value = files.map(({...file}) => ({...file, playing: false, editing: false}));
-      }
-    })));
+  await loadCollections();
 });
+
+function block() {
+  openedSlide.value = -1;
+  window.electron.ipcRenderer.invoke("slide", {type: "close"});
+}
+
+const confirm = useConfirm();
+const confirmDelete = (event: MouseEvent) => {
+  if (!event.currentTarget) return;
+  confirm.require({
+    // @ts-ignore
+    target: event.currentTarget,
+    message: 'Do you want to delete this collection? This action cannot be undone',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true
+    },
+    acceptProps: {
+      label: 'Delete',
+      severity: 'danger'
+    },
+    accept: async () => {
+      await window.electron.ipcRenderer.invoke("deleteCollection", collectionPath.value);
+      collectionPath.value = "";
+      collectionTitle.value = "New collection";
+      block();
+      await loadCollections();
+    }
+  });
+};
+const confirmDeleteTrack = (event: MouseEvent, index: number) => {
+  if (!event.currentTarget) return;
+  confirm.require({
+    // @ts-ignore
+    target: event.currentTarget,
+    message: 'Do you want to delete this track? This action cannot be undone',
+    rejectProps: {
+      label: 'Cancel',
+      severity: 'secondary',
+      outlined: true
+    },
+    acceptProps: {
+      label: 'Delete',
+      severity: 'danger'
+    },
+    accept: async () => {
+      if (openedSlide.value === index) block();
+      mediaFiles.value.splice(index, 1);
+      await saveCollection();
+    }
+  });
+};
 
 function getTitle(filename: string, meta: mm.ICommonTagsResult | undefined): string {
   if (meta === undefined) return filename;
@@ -62,7 +134,7 @@ async function addFile() {
   mediaFiles.value.push(...files.map(({type, file, filename, meta}) => {
     return {type, file, playing: false, editing: false, title: getTitle(filename, meta)};
   }));
-  saveCollection();
+  await saveCollection();
 }
 
 function addLabel() {
@@ -116,33 +188,29 @@ function disableDrag() {
     isDraggingEnabled.value = true
   }, 100)
 }
-
-function block() {
-  openedSlide.value = -1;
-  window.electron.ipcRenderer.invoke("slide", {type: "close"});
-}
 </script>
 
 <template>
   <main>
     <Menu :model="menuItems"/>
     <div class="media">
-      <div class="collection">
-        <div class="collectionHeader">
+      <header class="collection">
+        <header class="collectionHeader">
           <template v-if="!collectionEditing">
             <span>{{collectionTitle}}</span>
-            <Button @click.prevent.stop="collectionEditing = !collectionEditing" class="save">Edit</Button>
+            <Button @click="collectionEditing = !collectionEditing" class="save">Edit</Button>
+            <Button severity="danger" @click="confirmDelete($event)" :disabled="collectionPath === ''">Remove</Button>
           </template>
           <template v-else>
             <InputText v-model="collectionTitle" class="titleInput"/>
-            <Button @click.prevent.stop="collectionEditing = !collectionEditing; saveCollection()" class="save">Save</Button>
+            <Button @click="collectionEditing = !collectionEditing; saveCollection()" class="save">Save</Button>
           </template>
-        </div>
+        </header>
         <div class="add">
           <Button @click="addFile"><img :src="addIcon"></Button>
           <Button @click="addLabel"><img :src="textIcon"></Button>
         </div>
-      </div>
+      </header>
       <Accordion class="tracks" v-model:value="openedFiles" multiple>
         <AccordionPanel
             v-for="({type, file, title, editing}, index) in mediaFiles"
@@ -159,11 +227,19 @@ function block() {
             :class="{ 'dragging': dragItemIndex === index }"
         >
           <AccordionHeader>
-            <span v-if="!editing" @click.prevent.stop="mediaFiles[index].editing = !editing">{{title}}</span>
-            <template v-else>
-              <InputText v-model="mediaFiles[index].title" class="titleInput"/>
-              <Button @click.prevent.stop="mediaFiles[index].editing = !editing" class="save">Save</Button>
-            </template>
+            <header class="trackHeader">
+              <template v-if="!editing">
+                <span v-if="type !== 'label'" @click.prevent.stop="mediaFiles[index].editing = !editing">{{title}}</span>
+                <Badge v-else @click.prevent.stop="mediaFiles[index].editing = !editing" severity="contrast">
+                  <span class="label">{{title}}</span>
+                </Badge>
+              </template>
+              <template v-else>
+                <InputText v-model="mediaFiles[index].title" class="titleInput"/>
+                <Button @click.prevent.stop="mediaFiles[index].editing = !editing" class="save">Save</Button>
+              </template>
+              <Button severity="danger" @click.prevent.stop="confirmDeleteTrack($event, index)">Remove</Button>
+            </header>
           </AccordionHeader>
           <AccordionContent>
             <div class="players" v-if="type != 'label' && type != 'other'">
@@ -284,6 +360,18 @@ main {
 
 .players {
   padding: 10px 20px 20px 20px;
+}
+
+.trackHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-right: 10px;
+}
+
+.label {
+  font-size: 16px;
 }
 </style>
 

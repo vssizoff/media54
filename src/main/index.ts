@@ -196,6 +196,7 @@ app.whenReady().then(() => {
   ipcMain.handle("saveCollection", async (_, collection) => {
     if (!fs.existsSync(collectionDir)) await initCollection(collectionDir);
     await fs.promises.writeFile(Path.join(collectionDir, "collection.json"), collection, {encoding: "utf8"});
+    return collectionDir;
   });
 
   ipcMain.handle("collections", async (_) => {
@@ -204,6 +205,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle("collection", async (_, collectionDir) => {
     return JSON.parse(await fs.promises.readFile(Path.join(collectionDir, "collection.json"), {encoding: "utf8"}));
+  });
+
+  ipcMain.handle("deleteCollection", async (_, collectionDir) => {
+    await fs.promises.rm(collectionDir, {recursive: true, force: true});
   });
 
   app.on('activate', function () {
