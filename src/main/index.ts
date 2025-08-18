@@ -124,12 +124,17 @@ async function initCollection(collectionDir: string) {
   await fs.promises.writeFile(Path.join(collectionDir, "collection.json"), JSON.stringify({title: "New collection", file: []}), {encoding: "utf8"});
 }
 
+async function newIndexedFile(parentDir: string) {
+  return Math.max(...(await fs.promises.readdir(parentDir)).map(file => Number(Path.parse(file).name)).filter(num => !Number.isNaN(num))) + 1;
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
-  let collectionDir = Path.join(DATA_DIR, `${fs.readdirSync(DATA_DIR).length}`);
+app.whenReady().then(async () => {
+  if (!fs.existsSync(DATA_DIR)) await fs.promises.mkdir(DATA_DIR);
+  let collectionDir = Path.join(DATA_DIR, `${await newIndexedFile(DATA_DIR)}`);
+  console.log(collectionDir);
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
@@ -171,7 +176,7 @@ app.whenReady().then(() => {
     let ret: Array<any> = [];
     for (const path of filePaths) {
       let ext = Path.parse(path).ext.substring(1).toLowerCase();
-      let newPath = Path.join(collectionDir, `${(await fs.promises.readdir(collectionDir)).length}.${ext}`);
+      let newPath = Path.join(collectionDir, `${await newIndexedFile(collectionDir)}.${ext}`);
       await fs.promises.cp(path, newPath);
       ret.push({
         type: supportedFormats.audio.includes(ext) ? "audio" :
@@ -203,12 +208,19 @@ app.whenReady().then(() => {
     return Promise.all((await fs.promises.readdir(DATA_DIR)).map(collection => [Path.join(DATA_DIR, collection), Path.join(DATA_DIR, collection, "collection.json")]).map(async ([collectionDir, collection]) => [collectionDir, JSON.parse(await fs.promises.readFile(collection, {encoding: "utf8"})).title]));
   });
 
-  ipcMain.handle("collection", async (_, collectionDir) => {
-    return JSON.parse(await fs.promises.readFile(Path.join(collectionDir, "collection.json"), {encoding: "utf8"}));
+  ipcMain.handle("collection", async (_, collectionDir_) => {
+    collectionDir = collectionDir_;
+    console.log(collectionDir);
+    return JSON.parse(await fs.promises.readFile(Path.join(collectionDir_, "collection.json"), {encoding: "utf8"}));
   });
 
   ipcMain.handle("deleteCollection", async (_, collectionDir) => {
     await fs.promises.rm(collectionDir, {recursive: true, force: true});
+  });
+
+  ipcMain.handle("newCollection", async () => {
+    collectionDir = Path.join(DATA_DIR, `${await newIndexedFile(DATA_DIR)}`);
+    console.log(collectionDir);
   });
 
   app.on('activate', function () {

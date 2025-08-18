@@ -28,17 +28,21 @@ const openingMap = ref(new Map<number, Array<NodeJS.Timeout>>);
 const dragItemIndex = ref<number | null>(null);
 const isDraggingEnabled = ref<boolean>(true);
 const openedSlide = ref<number>(-1);
+const collectionEditing = ref(false);
+const collectionTitle = ref("New collection");
+const collectionPath = ref("");
 const menuItems = ref([
   {
     label: 'New',
     command() {
-      console.log("new");
+      window.electron.ipcRenderer.invoke("newCollection");
+      collectionPath.value = "";
+      collectionTitle.value = "New collection";
+      block();
+      mediaFiles.value = [];
     }
   }
 ]);
-const collectionEditing = ref(false);
-const collectionTitle = ref("New collection");
-const collectionPath = ref("");
 
 async function loadCollections() {
   menuItems.value.splice(1);
@@ -96,6 +100,7 @@ const confirmDelete = (event: MouseEvent) => {
       collectionPath.value = "";
       collectionTitle.value = "New collection";
       block();
+      mediaFiles.value = [];
       await loadCollections();
     }
   });
@@ -137,7 +142,7 @@ async function addFile() {
   await saveCollection();
 }
 
-function addLabel() {
+async function addLabel() {
   mediaFiles.value.push({
     type: "label",
     title: "label",
@@ -145,6 +150,7 @@ function addLabel() {
     playing: false,
     editing: false
   });
+  await saveCollection();
 }
 
 function openPresentation(index: number) {
