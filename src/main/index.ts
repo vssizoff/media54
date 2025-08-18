@@ -125,7 +125,7 @@ async function initCollection(collectionDir: string) {
 }
 
 async function newIndexedFile(parentDir: string) {
-  return Math.max(...(await fs.promises.readdir(parentDir)).map(file => Number(Path.parse(file).name)).filter(num => !Number.isNaN(num))) + 1;
+  return Math.max(...(await fs.promises.readdir(parentDir)).map(file => Number(Path.parse(file).name)).filter(num => !Number.isNaN(num)), -1) + 1;
 }
 
 // This method will be called when Electron has finished
