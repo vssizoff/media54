@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import {type PropType, ref, watch} from "vue";
-import * as mm from "music-metadata";
+import {ref, watch} from "vue";
 import Player from "@renderer/components/players/Player.vue";
 
 const props = defineProps({
