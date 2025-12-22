@@ -168,11 +168,14 @@ function close(index: number) {
 }
 
 function handleDragStart(e: Event, index: number) {
-  if (!isDraggingEnabled.value) {
-    e.preventDefault()
-    return
-  }
-  dragItemIndex.value = index
+  setTimeout(() => {
+    console.log(isDraggingEnabled.value);
+    if (!isDraggingEnabled.value) {
+      e.preventDefault()
+      return
+    }
+    dragItemIndex.value = index
+  }, 100);
 }
 
 function handleDragOver(index: number) {
@@ -222,7 +225,7 @@ function disableDrag() {
             v-for="({type, file, title, editing}, index) in mediaFiles"
             :value="index"
             :key="file ?? title"
-            draggable="true"
+            :draggable="isDraggingEnabled"
             @dragstart="handleDragStart($event, index)"
             @mouseenter="open(index)"
             @mouseleave="close(index)"

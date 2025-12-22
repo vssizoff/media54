@@ -128,6 +128,15 @@ async function newIndexedFile(parentDir: string) {
   return Math.max(...(await fs.promises.readdir(parentDir)).map(file => Number(Path.parse(file).name)).filter(num => !Number.isNaN(num)), -1) + 1;
 }
 
+async function perseMetadata(path: string) {
+    try {
+        return (await mm.parseFile(path)).common;
+    }
+    catch (error) {
+        return undefined;
+    }
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -184,7 +193,7 @@ app.whenReady().then(async () => {
                 supportedFormats.image.includes(ext) ? "image" : "other",
         file: pathToFileURL(newPath).href,
         meta: [...supportedFormats.audio, ...supportedFormats.video].includes(ext)
-            ? (await mm.parseFile(path)).common : undefined,
+            ? await perseMetadata(path) : undefined,
         path: newPath,
         filename: Path.parse(path).name + Path.parse(path).ext
       });

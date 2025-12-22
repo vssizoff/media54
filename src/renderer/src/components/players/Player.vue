@@ -50,8 +50,8 @@ function formatTime(seconds: number): string {
         :modelValue="props.currentTime"
         @update:modelValue="time => emit('update:currentTime', Array.isArray(time) ? time[0] : time)"
         :max="props.duration"
-        @mousedown.stop="emit('disableDrag')"
-        @touchstart.stop="emit('disableDrag')"
+        @mousedown.stop.prevent="emit('disableDrag')"
+        @touchstart.stop.prevent="emit('disableDrag')"
     />
     <div class="playerMain">
       <div class="controls">
