@@ -15,21 +15,24 @@ const emit = defineEmits<{
   (e: "update:playing", arg: boolean): void
   (e: "disableDrag"): void
   (e: "open"): void
+  (e: "close"): void
 }>();
 
 const audioRef = ref<HTMLAudioElement | null>(null)
 const currentTime = ref(0)
 const duration = ref(0)
 const volume = ref(1)
+const visible = ref(false);
 
-// watch(props, (value, oldValue) => {
-//
-// });
+watch(props, value => {
+  visible.value = value.opened;
+});
 
 function updatePlaying(playing: boolean) {
   emit('update:playing', playing);
   if (playing) {
     audioRef.value?.play();
+    visible.value = true;
     if (props.opened) {
       window.electron.ipcRenderer.invoke("slide", {type: "resume"});
     }
@@ -38,7 +41,8 @@ function updatePlaying(playing: boolean) {
         type: "open",
         file: props.src,
         timecode: currentTime.value,
-        fileType: "video"
+        fileType: "video",
+        play: true
       });
       console.log("open");
       emit("open");
@@ -48,6 +52,33 @@ function updatePlaying(playing: boolean) {
     audioRef.value?.pause();
     if (props.opened) window.electron.ipcRenderer.invoke("slide", {type: "pause"});
   }
+}
+
+function updateVisible(visible_: boolean): void {
+  visible.value = visible_;
+  if (visible_) {
+    if (!props.opened) {
+      window.electron.ipcRenderer.invoke("slide", {
+        type: "open",
+        file: props.src,
+        timecode: currentTime.value,
+        fileType: "video",
+        play: props.playing
+      });
+      console.log("open");
+      emit("open");
+    }
+  }
+  else {
+    if (props.opened) window.electron.ipcRenderer.invoke("slide", {type: "close"});
+    emit("close");
+  }
+}
+
+function playAudio() {
+  emit('update:playing', true);
+  audioRef.value?.play();
+  visible.value = true;
 }
 
 watch(volume, value => {
@@ -108,9 +139,13 @@ function fadeOutPause(left: number = 1000, volume0 = volume.value) {
         @loadedmetadata="onLoadedMetadata"
     />
     <Player
+        isVideo
         v-if="props.src"
         :playing="props.playing"
         @update:playing="updatePlaying($event)"
+        @playAudio="playAudio"
+        :visible="visible"
+        @update:visible="updateVisible($event)"
         :currentTime="currentTime"
         @update:currentTime="seek"
         :duration="duration"

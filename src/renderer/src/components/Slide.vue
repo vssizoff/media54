@@ -11,7 +11,8 @@ type CommandType = {
   type: "open",
   file: string,
   fileType: "video" | "image",
-  timecode: number
+  timecode: number,
+  play: boolean
 } | {
   type: "close" | "pause" | "resume"
 } | {
@@ -30,7 +31,7 @@ onMounted(() => {
         setTimeout(() => {
           console.log(videoComponent.value);
           if (videoComponent.value) videoComponent.value.currentTime = currentTime.value;
-          videoComponent.value?.play();
+          if (command.play) videoComponent.value?.play();
         }, 0.1);
       }
     }

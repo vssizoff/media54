@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import playIcon from "@renderer/assets/play.svg";
+import playIcon from "@renderer/assets/show.svg";
 import stopIcon from "@renderer/assets/stop.svg";
 import {Button} from "primevue";
 import {watch} from "vue";

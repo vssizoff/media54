@@ -3,14 +3,16 @@ import {Button, Slider, Popover} from "primevue";
 
 import playIcon from "@renderer/assets/play.svg";
 import pauseIcon from "@renderer/assets/pause.svg";
+import showIcon from "@renderer/assets/show.svg";
+import stopIcon from "@renderer/assets/stop.svg";
 import fadeInIcon from "@renderer/assets/fadeIn.svg";
 import fadeOutIcon from "@renderer/assets/fadeOut.svg";
-// import fadeOutPauseIcon from "@renderer/assets/fadeOutPause.svg";
 import volumeIcon from "@renderer/assets/volume.svg";
 import {useTemplateRef} from "vue";
 
 const props = defineProps({
   playing: Boolean,
+  visible: Boolean,
   currentTime: {
     type: Number,
     required: true
@@ -22,11 +24,17 @@ const props = defineProps({
   volume: {
     type: Number,
     default: 1
+  },
+  isVideo: {
+    type: Boolean,
+    default: false
   }
 });
 
 const emit = defineEmits<{
   (e: "update:playing", arg: boolean): void
+  (e: "playAudio"): void
+  (e: "update:visible", arg: boolean): void
   (e: "update:currentTime", arg: number): void
   (e: "update:volume", arg: number): void
   (e: "disableDrag"): void
@@ -56,6 +64,8 @@ function formatTime(seconds: number): string {
     <div class="playerMain">
       <div class="controls">
         <Button @click="emit('update:playing', !props.playing)"><img :src="!props.playing ? playIcon : pauseIcon"></Button>
+        <Button v-if="isVideo" @click="emit('playAudio')"><img :src="playIcon"><img :src="stopIcon"></Button>
+        <Button v-if="isVideo" @click="emit('update:visible', !props.visible)"><img :src="!props.visible ? showIcon : stopIcon"></Button>
         <Button @click="emit('fadeIn')"><img :src="fadeInIcon"></Button>
         <Button @click="emit('fadeOut')"><img :src="fadeOutIcon"></Button>
         <Button @click="emit('fadeOutPause')"><img :src="fadeOutIcon"><img :src="pauseIcon"></Button>

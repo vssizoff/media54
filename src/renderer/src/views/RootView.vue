@@ -267,6 +267,7 @@ function disableDrag() {
                   @disableDrag="disableDrag"
                   :opened="openedSlide === index"
                   @open="openedSlide = index"
+                  @close="openedSlide = -1"
               />
               <ImagePlayer
                   v-if="type === 'image'"
