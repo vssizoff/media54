@@ -233,7 +233,7 @@ function disableDrag() {
             @drop="handleDrop"
             @dragenter.prevent
             @dragleave.prevent
-            :class="{ 'dragging': dragItemIndex === index, 'accordion-panel': true }"
+            :class="{ 'dragging': dragItemIndex === index }"
         >
           <AccordionHeader>
             <header class="trackHeader">
@@ -250,7 +250,7 @@ function disableDrag() {
               <Button severity="danger" @click.prevent.stop="confirmDeleteTrack($event, index)">Remove</Button>
             </header>
           </AccordionHeader>
-          <AccordionContent>
+          <AccordionContent class="trackContent">
             <div class="players" v-if="type != 'label' && type != 'other'">
               <AudioPlayer
                   v-if="type === 'audio'"
@@ -278,7 +278,7 @@ function disableDrag() {
                   @open="openedSlide = index"
               />
             </div>
-            <div class="float-add" v-if="openedFiles.includes(index)">
+            <div class="floatAdd" v-if="openedFiles.includes(index)">
               <Button @click="addFile(index)"><img :src="addIcon"></Button>
               <Button @click="addLabel(index)"><img :src="textIcon"></Button>
             </div>
@@ -387,7 +387,11 @@ main {
   font-size: 16px;
 }
 
-.float-add {
+.trackContent {
+  position: relative;
+}
+
+.floatAdd {
   position: absolute;
   bottom: -10px;
   right: 10px;
