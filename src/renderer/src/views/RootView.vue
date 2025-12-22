@@ -133,17 +133,17 @@ function getTitle(filename: string, meta: mm.ICommonTagsResult | undefined): str
   return `${filename} ${meta?.artists?.join(", ") ?? meta?.artist ?? meta?.albumartist ?? "unknown"}: ${meta?.title ?? "unknown"}`;
 }
 
-async function addFile() {
+async function addFile(index: number = -1) {
   const files: Array<UploadedFile> = await window.electron.ipcRenderer.invoke("open");
   console.log(files);
-  mediaFiles.value.push(...files.map(({type, file, filename, meta}) => {
+  mediaFiles.value.splice(index + 1, 0, ...files.map(({type, file, filename, meta}) => {
     return {type, file, playing: false, editing: false, title: getTitle(filename, meta)};
   }));
   await saveCollection();
 }
 
-async function addLabel() {
-  mediaFiles.value.push({
+async function addLabel(index: number = -1) {
+  mediaFiles.value.splice(index + 1, 0, {
     type: "label",
     title: "label",
     file: "",
@@ -213,15 +213,15 @@ function disableDrag() {
           </template>
         </header>
         <div class="add">
-          <Button @click="addFile"><img :src="addIcon"></Button>
-          <Button @click="addLabel"><img :src="textIcon"></Button>
+          <Button @click="addFile()"><img :src="addIcon"></Button>
+          <Button @click="addLabel()"><img :src="textIcon"></Button>
         </div>
       </header>
       <Accordion class="tracks" v-model:value="openedFiles" multiple>
         <AccordionPanel
             v-for="({type, file, title, editing}, index) in mediaFiles"
             :value="index"
-            :key="file"
+            :key="file ?? title"
             draggable="true"
             @dragstart="handleDragStart($event, index)"
             @mouseenter="open(index)"
@@ -230,7 +230,7 @@ function disableDrag() {
             @drop="handleDrop"
             @dragenter.prevent
             @dragleave.prevent
-            :class="{ 'dragging': dragItemIndex === index }"
+            :class="{ 'dragging': dragItemIndex === index, 'accordion-panel': true }"
         >
           <AccordionHeader>
             <header class="trackHeader">
@@ -274,6 +274,10 @@ function disableDrag() {
                   :opened="openedSlide === index"
                   @open="openedSlide = index"
               />
+            </div>
+            <div class="float-add" v-if="openedFiles.includes(index)">
+              <Button @click="addFile(index)"><img :src="addIcon"></Button>
+              <Button @click="addLabel(index)"><img :src="textIcon"></Button>
             </div>
           </AccordionContent>
         </AccordionPanel>
@@ -378,6 +382,23 @@ main {
 
 .label {
   font-size: 16px;
+}
+
+.float-add {
+  position: absolute;
+  bottom: -10px;
+  right: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  width: 100%;
+  justify-content: flex-end;
+
+  &:hover {
+    opacity: 1;
+  }
 }
 </style>
 
