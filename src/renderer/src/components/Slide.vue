@@ -24,16 +24,20 @@ onMounted(() => {
   window.electron.ipcRenderer.on("slide", (_, command: CommandType) => {
     console.log(command);
     if (command.type === "open") {
-      src.value = command.file;
-      type.value = command.fileType;
-      if (command.fileType === "video") {
-        currentTime.value = command.timecode;
-        setTimeout(() => {
-          console.log(videoComponent.value);
-          if (videoComponent.value) videoComponent.value.currentTime = currentTime.value;
-          if (command.play) videoComponent.value?.play();
-        }, 0.1);
-      }
+      videoComponent.value?.pause();
+      src.value = "";
+      type.value = "";
+      setTimeout(() => {
+        src.value = command.file;
+        type.value = command.fileType;
+        if (command.fileType === "video") {
+          currentTime.value = command.timecode;
+          setTimeout(() => {
+            if (videoComponent.value) videoComponent.value.currentTime = currentTime.value;
+            if (command.play) videoComponent.value?.play();
+          }, 0.1);
+        }
+      }, 0.1);
     }
     if (command.type === "close") {
       videoComponent.value?.pause();
@@ -79,7 +83,7 @@ main {
 video, img {
   width: 100%;
   height: 100%;
-  object-fit: scale-down; /* масштабирует видео, сохраняя пропорции, обрезая лишнее */
+  object-fit: contain; /* масштабирует видео, сохраняя пропорции, обрезая лишнее */
   position: absolute;
   top: 0;
   left: 0;

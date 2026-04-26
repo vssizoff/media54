@@ -24,7 +24,6 @@ import Slide from "@renderer/components/Slide.vue";
 const displays = ref<Array<string>>([]);
 const mediaFiles = ref<Array<MediaFile>>([]);
 const openedFiles = ref<Array<number>>([]);
-const openingMap = ref(new Map<number, Array<NodeJS.Timeout>>);
 const dragItemIndex = ref<number | null>(null);
 const isDraggingEnabled = ref<boolean>(true);
 const openedSlide = ref<number>(-1);
@@ -53,7 +52,8 @@ async function loadCollections() {
           let {title, files}: {title: string, files: Array<CollectionFile>} = await window.electron.ipcRenderer.invoke("collection", path);
           collectionTitle.value = title;
           collectionPath.value = path;
-          mediaFiles.value = files.map(({...file}) => ({...file, playing: false, editing: false}));
+          mediaFiles.value = files.map(({...file}, i) => ({...file, playing: false, editing: false, id: file.id ?? i}));
+          openedFiles.value = mediaFiles.value.map(file => file.id);
         }
       }))
   );
@@ -63,7 +63,7 @@ async function saveCollection() {
   console.log(collectionTitle.value);
   collectionPath.value = await window.electron.ipcRenderer.invoke("saveCollection", JSON.stringify({
     title: collectionTitle.value,
-    files: mediaFiles.value.map(({title, file, type}) => ({title, file, type}))
+    files: mediaFiles.value.map(({title, file, type, id}) => ({title, file, type, id}))
   }));
   await loadCollections();
 }
@@ -136,35 +136,31 @@ function getTitle(filename: string, meta: mm.ICommonTagsResult | undefined): str
 async function addFile(index: number = -1) {
   const files: Array<UploadedFile> = await window.electron.ipcRenderer.invoke("open");
   console.log(files);
-  mediaFiles.value.splice(index + 1, 0, ...files.map(({type, file, filename, meta}) => {
-    return {type, file, playing: false, editing: false, title: getTitle(filename, meta)};
+  let maxIndex = Math.max(...mediaFiles.value.map(file => file.id), 0);
+  console.log(maxIndex);
+  mediaFiles.value.splice(index + 1, 0, ...files.map(({type, file, filename, meta}, i) => {
+    openedFiles.value.push(maxIndex + i + 1);
+    return {type, file, playing: false, editing: false, title: getTitle(filename, meta), id: maxIndex + i + 1};
   }));
   await saveCollection();
 }
 
 async function addLabel(index: number = -1) {
+  let maxIndex = Math.max(...mediaFiles.value.map(file => file.id), 0);
   mediaFiles.value.splice(index + 1, 0, {
     type: "label",
     title: "label",
     file: "",
     playing: false,
-    editing: false
+    editing: false,
+    id: maxIndex + 1
   });
+  openedFiles.value.push(maxIndex + 1);
   await saveCollection();
 }
 
 function openPresentation(index: number) {
   window.electron.ipcRenderer.invoke("presentation", index);
-}
-
-function open(index: number) {
-  openingMap.value.set(index, [...(openingMap.value.get(index) ?? []), setTimeout(() => openedFiles.value.push(index), 0)]);
-}
-
-function close(index: number) {
-  openingMap.value.get(index)?.forEach(timeout => clearTimeout(timeout));
-  openingMap.value.delete(index);
-  openedFiles.value = openedFiles.value.filter(i => i != index || mediaFiles.value[index].playing)
 }
 
 function handleDragStart(e: Event, index: number) {
@@ -222,13 +218,11 @@ function disableDrag() {
       </header>
       <Accordion class="tracks" v-model:value="openedFiles" multiple>
         <AccordionPanel
-            v-for="({type, file, title, editing}, index) in mediaFiles"
-            :value="index"
-            :key="file ?? title"
+            v-for="({type, file, title, editing, id}, index) in mediaFiles"
+            :value="id"
+            :key="id"
             :draggable="isDraggingEnabled"
             @dragstart="handleDragStart($event, index)"
-            @mouseenter="open(index)"
-            @mouseleave="close(index)"
             @dragover.prevent="handleDragOver(index)"
             @drop="handleDrop"
             @dragenter.prevent
@@ -250,7 +244,11 @@ function disableDrag() {
               <Button severity="danger" @click.prevent.stop="confirmDeleteTrack($event, index)">Remove</Button>
             </header>
           </AccordionHeader>
-          <AccordionContent class="trackContent">
+          <AccordionContent
+              class="trackContent"
+              @dragstart.prevent.stop
+              :draggable="false"
+          >
             <div class="players" v-if="type != 'label' && type != 'other'">
               <AudioPlayer
                   v-if="type === 'audio'"
@@ -417,6 +415,10 @@ main {
 
 .p-accordioncontent {
   transition-duration: .8s !important;
+}
+
+.p-accordionheader {
+  padding: 5px 10px 0 10px !important;
 }
 
 html, body {

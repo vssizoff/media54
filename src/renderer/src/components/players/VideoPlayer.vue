@@ -31,6 +31,7 @@ watch(props, value => {
 function updatePlaying(playing: boolean) {
   emit('update:playing', playing);
   if (playing) {
+    emit("open");
     audioRef.value?.play();
     visible.value = true;
     if (props.opened) {
@@ -44,8 +45,6 @@ function updatePlaying(playing: boolean) {
         fileType: "video",
         play: true
       });
-      console.log("open");
-      emit("open");
     }
   }
   else {

@@ -16,6 +16,7 @@ export type CollectionFile = {
     title: string,
     type: "image" | "other" | "label" | "audio" | "video",
     file: string,
+    id: number
 };
 
 export type MediaFile = CollectionFile & {
