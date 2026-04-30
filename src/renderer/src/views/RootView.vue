@@ -20,6 +20,7 @@ import VideoPlayer from "@renderer/components/players/VideoPlayer.vue";
 import ImagePlayer from "@renderer/components/players/ImagePlayer.vue";
 import blockIcon from "@renderer/assets/stop.svg";
 import Slide from "@renderer/components/Slide.vue";
+import PresentationPlayer from "@renderer/components/players/PresentationPlayer.vue";
 
 const displays = ref<Array<string>>([]);
 const mediaFiles = ref<Array<MediaFile>>([]);
@@ -63,7 +64,7 @@ async function saveCollection() {
   console.log(collectionTitle.value);
   collectionPath.value = await window.electron.ipcRenderer.invoke("saveCollection", JSON.stringify({
     title: collectionTitle.value,
-    files: mediaFiles.value.map(({title, file, type, id}) => ({title, file, type, id}))
+    files: mediaFiles.value.map(({title, file, type, id, max}) => ({title, file, type, id, ...(max ? {max} : {})}))
   }));
   await loadCollections();
 }
@@ -138,9 +139,9 @@ async function addFile(index: number = -1) {
   console.log(files);
   let maxIndex = Math.max(...mediaFiles.value.map(file => file.id), 0);
   console.log(maxIndex);
-  mediaFiles.value.splice(index + 1, 0, ...files.map(({type, file, filename, meta}, i) => {
+  mediaFiles.value.splice(index + 1, 0, ...files.map(({type, file, filename, meta, max}, i) => {
     openedFiles.value.push(maxIndex + i + 1);
-    return {type, file, playing: false, editing: false, title: getTitle(filename, meta), id: maxIndex + i + 1};
+    return {type, file, playing: false, editing: false, title: getTitle(filename, meta), id: maxIndex + i + 1, max};
   }));
   await saveCollection();
 }
@@ -218,7 +219,7 @@ function disableDrag() {
       </header>
       <Accordion class="tracks" v-model:value="openedFiles" multiple>
         <AccordionPanel
-            v-for="({type, file, title, editing, id}, index) in mediaFiles"
+            v-for="({type, file, title, editing, id, max}, index) in mediaFiles"
             :value="id"
             :key="id"
             :draggable="isDraggingEnabled"
@@ -276,8 +277,18 @@ function disableDrag() {
                   :opened="openedSlide === index"
                   @open="openedSlide = index"
               />
+              <PresentationPlayer
+                  v-if="type === 'presentation'"
+                  draggable="false"
+                  :src="file"
+                  v-model:playing="mediaFiles[index].playing"
+                  @disableDrag="disableDrag"
+                  :opened="openedSlide === index"
+                  @open="openedSlide = index"
+                  :max="max"
+              />
             </div>
-            <div class="floatAdd" v-if="openedFiles.includes(index)">
+            <div class="floatAdd" v-if="openedFiles.includes(id)">
               <Button @click="addFile(index)"><img :src="addIcon"></Button>
               <Button @click="addLabel(index)"><img :src="textIcon"></Button>
             </div>

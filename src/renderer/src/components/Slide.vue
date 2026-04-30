@@ -6,18 +6,23 @@ const videoComponent = useTemplateRef<HTMLVideoElement>("videoComponent");
 const src = ref("");
 const type = ref("");
 const currentTime = ref(0);
+const currentSlide = ref(0);
 
 type CommandType = {
   type: "open",
   file: string,
-  fileType: "video" | "image",
+  fileType: "video" | "image" | "pdf",
   timecode: number,
-  play: boolean
+  play: boolean,
+  slide: number
 } | {
   type: "close" | "pause" | "resume"
 } | {
   type: "seek",
   timecode: number
+} | {
+  type: "pdfSlide",
+  slide: number
 };
 
 onMounted(() => {
@@ -37,6 +42,9 @@ onMounted(() => {
             if (command.play) videoComponent.value?.play();
           }, 0.1);
         }
+        if (command.fileType === "pdf") {
+          currentSlide.value = command.slide;
+        }
       }, 0.1);
     }
     if (command.type === "close") {
@@ -53,6 +61,9 @@ onMounted(() => {
     if (command.type === "seek") {
       currentTime.value = command.timecode;
     }
+    if (command.type === "pdfSlide") {
+      currentSlide.value = command.slide;
+    }
   });
 });
 
@@ -63,11 +74,12 @@ watch(currentTime, value => {
 
 <template>
   <div>
-    <main>
+    <main ref="container">
       <video v-if="type === 'video'" ref="videoComponent" muted>
         <source :src="src">
       </video>
       <img v-if="type === 'image'" :src="src">
+      <img v-if="type === 'pdf'" :src="`${src}/${currentSlide}.png`">
     </main>
   </div>
 </template>

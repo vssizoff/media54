@@ -7,6 +7,7 @@ import * as mm from "music-metadata";
 import * as Path from "node:path";
 import * as fs from "node:fs";
 import {homedir} from "node:os";
+import {pdfToPng} from "pdf-to-png-converter";
 
 let secondaryWindows: Array<BrowserWindow> = [];
 
@@ -115,7 +116,8 @@ function createWindow(): BrowserWindow {
 const supportedFormats = {
   audio: ['mp3', 'wav', 'ogg'],
   video: ['mp4', 'mkv', 'mov', 'avi'],
-  image: ['svg', 'ico', 'jpg', 'png', 'jpeg', 'gif', 'bmp', 'tiff', 'avif']
+  image: ['svg', 'ico', 'jpg', 'png', 'jpeg', 'gif', 'bmp', 'tiff', 'avif'],
+  pres: ['pdf']
 }
 const DATA_DIR = Path.join(homedir(), '.media54');
 
@@ -175,10 +177,11 @@ app.whenReady().then(async () => {
     let filePaths = (await dialog.showOpenDialog({
       properties: ["openFile", "multiSelections"],
       filters: [
-        {name: 'All supported formats', extensions: [...supportedFormats.audio, ...supportedFormats.video, ...supportedFormats.image]},
+        {name: 'All supported formats', extensions: [...supportedFormats.audio, ...supportedFormats.video, ...supportedFormats.image, ...supportedFormats.pres]},
         {name: 'Audio Files', extensions: supportedFormats.audio},
         {name: 'Video Files', extensions: supportedFormats.video},
         {name: 'Image Files', extensions: supportedFormats.image},
+        {name: 'Presentations', extensions: supportedFormats.pres},
         {name: 'All files', extensions: ['*']}
       ]
     })).filePaths;
@@ -186,16 +189,29 @@ app.whenReady().then(async () => {
     for (const path of filePaths) {
       let ext = Path.parse(path).ext.substring(1).toLowerCase();
       let newPath = Path.join(collectionDir, `${await newIndexedFile(collectionDir)}.${ext}`);
-      await fs.promises.cp(path, newPath);
+      let max: number | undefined = undefined;
+      if (supportedFormats.pres.includes(ext)) {
+        const pages = await pdfToPng(path, {
+          outputFolder: newPath,
+          outputFileMaskFunc: (pageNumber) => `${pageNumber}.png`,
+          viewportScale: 3.
+        });
+        max = pages.length
+      }
+      else {
+        await fs.promises.cp(path, newPath);
+      }
       ret.push({
         type: supportedFormats.audio.includes(ext) ? "audio" :
             supportedFormats.video.includes(ext) ? "video" :
-                supportedFormats.image.includes(ext) ? "image" : "other",
+            supportedFormats.image.includes(ext) ? "image" :
+            supportedFormats.pres.includes(ext) ? "presentation" : "other",
         file: pathToFileURL(newPath).href,
         meta: [...supportedFormats.audio, ...supportedFormats.video].includes(ext)
             ? await perseMetadata(path) : undefined,
         path: newPath,
-        filename: Path.parse(path).name + Path.parse(path).ext
+        filename: Path.parse(path).name + Path.parse(path).ext,
+        max
       });
     }
     return ret;

@@ -6,17 +6,24 @@ export type UploadedFile = {
     filename: string
 } & ({
     type: "image" | "other",
-    meta: undefined
+    meta: undefined,
+    max: undefined
+} | {
+    type: "presentation",
+    meta: undefined,
+    max: number
 } | {
     type: "audio" | "video",
-    meta: mm.ICommonTagsResult
+    meta: mm.ICommonTagsResult,
+    max: undefined
 })
 
 export type CollectionFile = {
     title: string,
-    type: "image" | "other" | "label" | "audio" | "video",
+    type: "image" | "other" | "label" | "audio" | "video" | "presentation",
     file: string,
-    id: number
+    id: number,
+    max?: number
 };
 
 export type MediaFile = CollectionFile & {
