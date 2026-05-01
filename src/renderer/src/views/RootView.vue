@@ -9,11 +9,10 @@ import {
   InputText,
   Menu,
   useConfirm,
-  Badge
+  Badge,
+  ContextMenu
 } from "primevue";
 import AudioPlayer from "@renderer/components/players/AudioPlayer.vue";
-import addIcon from "@renderer/assets/add.svg";
-import textIcon from "@renderer/assets/text.svg";
 import type {CollectionFile, MediaFile, UploadedFile} from "@renderer/types.js";
 import * as mm from "music-metadata";
 import VideoPlayer from "@renderer/components/players/VideoPlayer.vue";
@@ -21,6 +20,17 @@ import ImagePlayer from "@renderer/components/players/ImagePlayer.vue";
 import blockIcon from "@renderer/assets/stop.svg";
 import Slide from "@renderer/components/Slide.vue";
 import PresentationPlayer from "@renderer/components/players/PresentationPlayer.vue";
+
+import addIcon from "@renderer/assets/add.svg";
+import textIcon from "@renderer/assets/text.svg";
+import removeIcon from "@renderer/assets/remove.svg";
+import dragIcon from "@renderer/assets/drag.svg";
+
+import audioIcon from "@renderer/assets/audio.svg";
+import videoIcon from "@renderer/assets/video.svg";
+import imageIcon from "@renderer/assets/image.svg";
+import presentationIcon from "@renderer/assets/presentation.svg";
+import otherIcon from "@renderer/assets/other.svg";
 
 const displays = ref<Array<string>>([]);
 const mediaFiles = ref<Array<MediaFile>>([]);
@@ -194,6 +204,32 @@ function disableDrag() {
     isDraggingEnabled.value = true
   }, 100)
 }
+
+const contextMenu = ref();
+const contextMenuIndex = ref<number>(0);
+const contextMenuItems = ref([
+  {
+    label: "Add file below",
+    img: addIcon,
+    command() {
+      addFile(contextMenuIndex.value);
+    }
+  },
+  {
+    label: "Add label below",
+    img: textIcon,
+    command() {
+      addLabel(contextMenuIndex.value);
+    }
+  },
+  {
+    label: "Remove",
+    img: removeIcon,
+    command(event) {
+      confirmDeleteTrack(event.originalEvent, contextMenuIndex.value);
+    }
+  }
+]);
 </script>
 
 <template>
@@ -222,18 +258,23 @@ function disableDrag() {
             v-for="({type, file, title, editing, id, max}, index) in mediaFiles"
             :value="id"
             :key="id"
-            :draggable="isDraggingEnabled"
-            @dragstart="handleDragStart($event, index)"
             @dragover.prevent="handleDragOver(index)"
             @drop="handleDrop"
             @dragenter.prevent
             @dragleave.prevent
             :class="{ 'dragging': dragItemIndex === index }"
+            @contextmenu="contextMenuIndex = index; contextMenu.show($event)"
         >
           <AccordionHeader>
             <header class="trackHeader">
               <template v-if="!editing">
-                <span v-if="type !== 'label'" @click.prevent.stop="mediaFiles[index].editing = !editing">{{title}}</span>
+                <div v-if="type !== 'label'" @click.prevent.stop="mediaFiles[index].editing = !editing" class="title">
+                  <img :src="dragIcon"
+                       :draggable="isDraggingEnabled"
+                       @dragstart="handleDragStart($event, index)">
+                  <img :src="type === 'audio' ? audioIcon : type === 'image' ? imageIcon : type === 'video' ? videoIcon : type === 'presentation' ? presentationIcon : otherIcon"/>
+                  <h4>{{title}}</h4>
+                </div>
                 <Badge v-else @click.prevent.stop="mediaFiles[index].editing = !editing" severity="contrast">
                   <span class="label">{{title}}</span>
                 </Badge>
@@ -242,7 +283,6 @@ function disableDrag() {
                 <InputText v-model="mediaFiles[index].title" class="titleInput"/>
                 <Button @click.prevent.stop="mediaFiles[index].editing = !editing" class="save">Save</Button>
               </template>
-              <Button severity="danger" @click.prevent.stop="confirmDeleteTrack($event, index)">Remove</Button>
             </header>
           </AccordionHeader>
           <AccordionContent
@@ -288,13 +328,17 @@ function disableDrag() {
                   :max="max"
               />
             </div>
-            <div class="floatAdd" v-if="openedFiles.includes(id)">
-              <Button @click="addFile(index)"><img :src="addIcon"></Button>
-              <Button @click="addLabel(index)"><img :src="textIcon"></Button>
-            </div>
           </AccordionContent>
         </AccordionPanel>
       </Accordion>
+      <ContextMenu ref="contextMenu" :model="contextMenuItems">
+        <template #item="{ item }">
+          <span class="contextMenuEntry">
+            <img :src="item.img" style="filter: invert(1)">
+            <span>{{item.label}}</span>
+          </span>
+        </template>
+      </ContextMenu>
     </div>
     <div class="controls">
       <Slide class="slide"/>
@@ -416,6 +460,17 @@ main {
   &:hover {
     opacity: 1;
   }
+}
+
+.title {
+  display: flex;
+  gap: 10px;
+}
+
+.contextMenuEntry {
+  display: flex;
+  gap: 10px;
+  cursor: pointer;
 }
 </style>
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, watch} from "vue";
+import {onMounted, ref, watch} from "vue";
 import Player from "@renderer/components/players/Player.vue";
 
 const props = defineProps({
@@ -100,6 +100,7 @@ function seek(value: number) {
       timecode: value,
     });
   }
+  if (preview.value) preview.value.currentTime = value;
 }
 
 const fadeTimeout = 1;
@@ -126,6 +127,18 @@ function fadeOutPause(left: number = 1000, volume0 = volume.value) {
   volume.value = left / 1000 * volume0;
   setTimeout(() => fadeOutPause(left - 2, volume0), fadeTimeout);
 }
+
+const preview = ref<HTMLVideoElement | null>(null);
+
+function revertPreview() {
+  if (preview.value) preview.value.currentTime = 10;
+}
+
+onMounted(() => {
+  setTimeout(() => {
+    revertPreview();
+  }, 0.1);
+});
 </script>
 
 <template>
@@ -137,7 +150,11 @@ function fadeOutPause(left: number = 1000, volume0 = volume.value) {
         @timeupdate="onTimeUpdate"
         @loadedmetadata="onLoadedMetadata"
     />
+    <video muted ref="preview" @click="revertPreview">
+      <source :src="src">
+    </video>
     <Player
+        class="player"
         isVideo
         v-if="props.src"
         :playing="props.playing"
@@ -158,5 +175,18 @@ function fadeOutPause(left: number = 1000, volume0 = volume.value) {
 </template>
 
 <style scoped>
+div {
+  display: flex;
+  gap: 20px;
+}
 
+video {
+  width: 10%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+}
+
+.player {
+  width: 100%;
+}
 </style>
