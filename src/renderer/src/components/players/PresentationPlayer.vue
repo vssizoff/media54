@@ -2,7 +2,8 @@
 import playIcon from "@renderer/assets/show.svg";
 import stopIcon from "@renderer/assets/stop.svg";
 import arrowIcon from "@renderer/assets/play.svg"
-import {Button, InputNumber} from "primevue";
+import pagesIcon from "@renderer/assets/pages.svg";
+import {Button, InputNumber, Dialog} from "primevue";
 import {ref, watch} from "vue";
 
 const props = defineProps({
@@ -19,6 +20,7 @@ const props = defineProps({
 });
 
 const slide = ref(1);
+const dialogVisible = ref(false);
 
 watch(props, value => {
   if (!value.opened) emit("update:playing", false);
@@ -62,9 +64,17 @@ watch(slide, () => {
     <div class="control">
       <Button @click="updatePlaying(!props.playing)"><img :src="!props.playing ? playIcon : stopIcon"></Button>
       <Button @click="slide <= 1 || slide--"><img style="transform: rotate(180deg)" :src="arrowIcon"></Button>
-      <InputNumber v-model="slide" :min="1" :max="max"/>
+      <InputNumber v-model="slide" :min="1" :max="max" class="input"/>
       <Button @click="slide >= max || slide++"><img :src="arrowIcon"></Button>
+      <Button @click="dialogVisible = true"><img :src="pagesIcon"></Button>
     </div>
+    <Dialog header="Страницы" v-model:visible="dialogVisible">
+      <div class="pages">
+        <span class="page" v-for="page in max" @click="slide = page; dialogVisible = false">
+          <img :src="`${src}/${page}.png`">
+        </span>
+      </div>
+    </Dialog>
   </div>
 </template>
 
@@ -77,6 +87,22 @@ watch(slide, () => {
 
 .preview {
   width: 10%;
+}
+
+.pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  max-width: 1000px;
+}
+
+.page {
+  width: 300px;
+  cursor: pointer;
+}
+
+.preview, .page {
   aspect-ratio: 16 / 9;
   border-radius: 10px;
   display: flex;
