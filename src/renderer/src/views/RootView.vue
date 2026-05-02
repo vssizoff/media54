@@ -280,7 +280,7 @@ const contextMenuItems = ref([
                 </Badge>
               </template>
               <template v-else>
-                <InputText v-model="mediaFiles[index].title" class="titleInput"/>
+                <InputText v-model="mediaFiles[index].title" @keydown.stop class="titleInput"/>
                 <Button @click.prevent.stop="mediaFiles[index].editing = !editing" class="save">Save</Button>
               </template>
             </header>
