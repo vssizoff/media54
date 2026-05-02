@@ -22,6 +22,8 @@ win:
       arch:
         - x64
         - ia32
+  signAndEditExecutable: false
+  signingHashAlgorithms: []
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
