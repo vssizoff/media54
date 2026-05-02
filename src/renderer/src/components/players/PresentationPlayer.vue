@@ -4,7 +4,7 @@ import stopIcon from "@renderer/assets/stop.svg";
 import arrowIcon from "@renderer/assets/play.svg"
 import pagesIcon from "@renderer/assets/pages.svg";
 import {Button, InputNumber, Dialog} from "primevue";
-import {ref, watch} from "vue";
+import {onMounted, ref, watch} from "vue";
 
 const props = defineProps({
   src: {
@@ -56,6 +56,14 @@ watch(slide, () => {
     });
   }
 });
+
+onMounted(() => {
+  window.addEventListener("keydown", event => {
+    if (!props.playing) return;
+    if (event.key === "PageUp" && slide.value > 1) slide.value--;
+    if (event.key === "PageDown" && slide.value < props.max) slide.value++;
+  });
+})
 </script>
 
 <template>
@@ -68,7 +76,7 @@ watch(slide, () => {
       <Button @click="slide >= max || slide++"><img :src="arrowIcon"></Button>
       <Button @click="dialogVisible = true"><img :src="pagesIcon"></Button>
     </div>
-    <Dialog header="Страницы" v-model:visible="dialogVisible">
+    <Dialog header="Pages" v-model:visible="dialogVisible">
       <div class="pages">
         <span class="page" v-for="page in max" @click="slide = page; dialogVisible = false">
           <img :src="`${src}/${page}.png`">
