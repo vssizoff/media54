@@ -447,6 +447,7 @@ main {
 
 .trackContent {
   position: relative;
+  display: block;
 }
 
 .title {
