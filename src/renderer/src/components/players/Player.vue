@@ -39,7 +39,6 @@ const emit = defineEmits<{
   (e: "update:volume", arg: number): void
   (e: "disableDrag"): void
   (e: "fadeIn"): void
-  (e: "fadeOut"): void
   (e: "fadeOutPause"): void
 }>();
 
@@ -67,7 +66,6 @@ function formatTime(seconds: number): string {
         <Button v-if="isVideo" @click="emit('playAudio')"><img :src="playIcon"><img :src="stopIcon"></Button>
         <Button v-if="isVideo" @click="emit('update:visible', !props.visible)"><img :src="!props.visible ? showIcon : stopIcon"></Button>
         <Button @click="emit('fadeIn')"><img :src="fadeInIcon"></Button>
-        <Button @click="emit('fadeOut')"><img :src="fadeOutIcon"></Button>
         <Button @click="emit('fadeOutPause')"><img :src="fadeOutIcon"><img :src="pauseIcon"></Button>
         <Button @click="volumePopover?.toggle"><img :src="volumeIcon"></Button>
         <Popover ref="volumePopover">

@@ -74,7 +74,7 @@ async function saveCollection() {
   console.log(collectionTitle.value);
   collectionPath.value = await window.electron.ipcRenderer.invoke("saveCollection", JSON.stringify({
     title: collectionTitle.value,
-    files: mediaFiles.value.map(({title, file, type, id, max}) => ({title, file, type, id, ...(max ? {max} : {})}))
+    files: mediaFiles.value.map(({title, file, type, id, max, volume}) => ({title, file, type, id, ...(max ? {max} : {}), ...(volume !== undefined ? {volume} : {})}))
   }));
   await loadCollections();
 }
@@ -297,6 +297,8 @@ const contextMenuItems = ref([
                   :src="file"
                   v-model:playing="mediaFiles[index].playing"
                   @disableDrag="disableDrag"
+                  :volume="mediaFiles[index].volume"
+                  @update:volume="mediaFiles[index].volume = $event; saveCollection()"
               />
               <VideoPlayer
                   v-if="type === 'video'"
@@ -307,6 +309,8 @@ const contextMenuItems = ref([
                   :opened="openedSlide === index"
                   @open="openedSlide = index"
                   @close="openedSlide = -1"
+                  :volume="mediaFiles[index].volume"
+                  @update:volume="mediaFiles[index].volume = $event; saveCollection()"
               />
               <ImagePlayer
                   v-if="type === 'image'"
@@ -443,23 +447,6 @@ main {
 
 .trackContent {
   position: relative;
-}
-
-.floatAdd {
-  position: absolute;
-  bottom: -10px;
-  right: 10px;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  opacity: 0;
-  transition: opacity 0.3s;
-  width: 100%;
-  justify-content: flex-end;
-
-  &:hover {
-    opacity: 1;
-  }
 }
 
 .title {

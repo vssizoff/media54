@@ -23,7 +23,8 @@ export type CollectionFile = {
     type: "image" | "other" | "label" | "audio" | "video" | "presentation",
     file: string,
     id: number,
-    max?: number
+    max?: number,
+    volume?: number
 };
 
 export type MediaFile = CollectionFile & {

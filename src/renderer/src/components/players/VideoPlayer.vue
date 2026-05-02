@@ -8,20 +8,22 @@ const props = defineProps({
     required: true
   },
   playing: Boolean,
-  opened: Boolean
+  opened: Boolean,
+  volume: Number
 });
 
 const emit = defineEmits<{
   (e: "update:playing", arg: boolean): void
+  (e: "update:volume", arg: number): void
   (e: "disableDrag"): void
   (e: "open"): void
   (e: "close"): void
 }>();
 
-const audioRef = ref<HTMLAudioElement | null>(null)
-const currentTime = ref(0)
-const duration = ref(0)
-const volume = ref(1)
+const audioRef = ref<HTMLAudioElement | null>(null);
+const currentTime = ref(0);
+const volume = ref(props.volume ?? 1);
+const duration = ref(0);
 const visible = ref(false);
 
 watch(props, value => {
@@ -82,6 +84,7 @@ function playAudio() {
 
 watch(volume, value => {
   if (audioRef.value) audioRef.value.volume = value;
+  emit("update:volume", value);
 });
 
 function onTimeUpdate() {
@@ -105,27 +108,20 @@ function seek(value: number) {
 
 const fadeTimeout = 1;
 
-function fadeIn(left: number = 1000, volume0 = volume.value) {
+function fadeIn(left: number = 1000) {
   if (left <= 0) return;
-  volume.value = (1000 - left) / 1000 * volume0;
-  setTimeout(() => fadeIn(left - 2, volume0), fadeTimeout);
+  if (audioRef.value) audioRef.value.volume = (1000 - left) / 1000 * volume.value;
+  setTimeout(() => fadeIn(left - 2), fadeTimeout);
 }
 
-function fadeOut(left: number = 1000, volume0 = volume.value) {
-  if (left <= 0) return;
-  volume.value = left / 1000 * volume0;
-  setTimeout(() => fadeOut(left - 2, volume0), fadeTimeout);
-}
-
-function fadeOutPause(left: number = 1000, volume0 = volume.value) {
+function fadeOutPause(left: number = 1000) {
   if (left <= 0) {
-    volume.value = volume0;
     audioRef.value?.pause();
     updatePlaying(false);
     return;
   }
-  volume.value = left / 1000 * volume0;
-  setTimeout(() => fadeOutPause(left - 2, volume0), fadeTimeout);
+  if (audioRef.value) audioRef.value.volume = left / 1000 * volume.value;
+  setTimeout(() => fadeOutPause(left - 2), fadeTimeout);
 }
 
 const preview = ref<HTMLVideoElement | null>(null);
@@ -170,7 +166,6 @@ onMounted(() => {
         v-model:volume="volume"
         @disableDrag="emit('disableDrag')"
         @fadeIn="audioRef?.play(); emit('update:playing', true); fadeIn()"
-        @fadeOut="fadeOut"
         @fadeOutPause="fadeOutPause"
     />
   </div>
