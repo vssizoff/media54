@@ -41,7 +41,7 @@ function updatePlaying(playing: boolean) {
 
 <template>
   <div>
-    <img :src="src" class="preview">
+    <div class="preview"><img :src="src"></div>
     <Button @click="updatePlaying(!props.playing)"><img :src="!props.playing ? playIcon : stopIcon"></Button>
   </div>
 </template>
@@ -50,15 +50,20 @@ function updatePlaying(playing: boolean) {
 div {
   display: flex;
   gap: 20px;
-}
-
-button {
-  margin-top: 23px;
+  align-items: flex-end;
 }
 
 .preview {
   width: 10%;
   aspect-ratio: 16 / 9;
   border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  border: 1px solid white;
+  overflow: hidden;
+
+  img {
+    height: 100%;
+  }
 }
 </style>

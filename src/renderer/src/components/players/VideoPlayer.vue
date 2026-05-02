@@ -150,9 +150,11 @@ onMounted(() => {
         @timeupdate="onTimeUpdate"
         @loadedmetadata="onLoadedMetadata"
     />
-    <video muted ref="preview" @click="revertPreview">
-      <source :src="src">
-    </video>
+    <div class="preview">
+      <video muted ref="preview" @click="revertPreview">
+        <source :src="src">
+      </video>
+    </div>
     <Player
         class="player"
         isVideo
@@ -178,15 +180,24 @@ onMounted(() => {
 div {
   display: flex;
   gap: 20px;
+  justify-content: flex-end;
 }
 
-video {
+.preview {
   width: 10%;
   aspect-ratio: 16 / 9;
   border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  border: 1px solid white;
+  overflow: hidden;
+
+  video {
+    height: 100%;
+  }
 }
 
 .player {
-  width: 100%;
+  width: 90%;
 }
 </style>

@@ -57,19 +57,39 @@ watch(slide, () => {
 </script>
 
 <template>
-  <div class="control">
-    <Button @click="updatePlaying(!props.playing)"><img :src="!props.playing ? playIcon : stopIcon"></Button>
-    <Button @click="slide <= 1 || slide--"><img style="transform: rotate(180deg)" :src="arrowIcon"></Button>
-    <InputNumber v-model="slide" :min="1" :max="max"/>
-    <Button @click="slide >= max || slide++"><img :src="arrowIcon"></Button>
+  <div class="container">
+    <span class="preview"><img :src="`${src}/${slide}.png`"></span>
+    <div class="control">
+      <Button @click="updatePlaying(!props.playing)"><img :src="!props.playing ? playIcon : stopIcon"></Button>
+      <Button @click="slide <= 1 || slide--"><img style="transform: rotate(180deg)" :src="arrowIcon"></Button>
+      <InputNumber v-model="slide" :min="1" :max="max"/>
+      <Button @click="slide >= max || slide++"><img :src="arrowIcon"></Button>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .control {
-  margin-top: 23px;
   display: flex;
   gap: 10px;
-  align-items: center;
+  align-items: flex-end;
+}
+
+.preview {
+  width: 10%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  border: 1px solid white;
+
+  img {
+    height: 100%;
+  }
+}
+
+.container {
+  display: flex;
+  gap: 20px;
 }
 </style>
