@@ -25,7 +25,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@primevue/themes": "^4.3.3",
     "music-metadata": "^11.12.3",
-    "pdf-to-png-converter": "^4.0.0",
+    "pdf-to-img": "^6.0.0",
     "primevue": "^4.3.3",
     "vue-router": "^4.6.4",
     "vuedraggable": "^2.24.3"

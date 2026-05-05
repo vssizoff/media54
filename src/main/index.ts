@@ -7,7 +7,7 @@ import * as mm from "music-metadata";
 import * as Path from "node:path";
 import * as fs from "node:fs";
 import {homedir} from "node:os";
-import {pdfToPng} from "pdf-to-png-converter";
+import { pdf } from "pdf-to-img";
 
 let secondaryWindows: Array<BrowserWindow> = [];
 
@@ -191,12 +191,13 @@ app.whenReady().then(async () => {
       let newPath = Path.join(collectionDir, `${await newIndexedFile(collectionDir)}.${ext}`);
       let max: number | undefined = undefined;
       if (supportedFormats.pres.includes(ext)) {
-        const pages = await pdfToPng(path, {
-          outputFolder: newPath,
-          outputFileMaskFunc: (pageNumber) => `${pageNumber}.png`,
-          viewportScale: 3.
-        });
-        max = pages.length
+        await fs.promises.mkdir(newPath);
+        max = 1
+        const document = await pdf(path, { scale: 3 });
+        for await (const image of document) {
+            await fs.promises.writeFile(Path.join(newPath, `${max}.png`), image);
+            max++;
+        }
       }
       else {
         await fs.promises.cp(path, newPath);
