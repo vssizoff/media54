@@ -275,9 +275,14 @@ const contextMenuItems = ref([
                   <img :src="type === 'audio' ? audioIcon : type === 'image' ? imageIcon : type === 'video' ? videoIcon : type === 'presentation' ? presentationIcon : otherIcon"/>
                   <h4>{{title}}</h4>
                 </div>
-                <Badge v-else @click.prevent.stop="mediaFiles[index].editing = !editing" severity="contrast">
-                  <span class="label">{{title}}</span>
-                </Badge>
+                <div v-else class="labelHeader">
+                  <img :src="dragIcon"
+                       :draggable="isDraggingEnabled"
+                       @dragstart="handleDragStart($event, index)">
+                  <Badge @click.prevent.stop="mediaFiles[index].editing = !editing" severity="contrast">
+                    <span class="label">{{title}}</span>
+                  </Badge>
+                </div>
               </template>
               <template v-else>
                 <InputText v-model="mediaFiles[index].title" @keydown.stop class="titleInput"/>
@@ -357,6 +362,11 @@ const contextMenuItems = ref([
 </template>
 
 <style scoped>
+.labelHeader {
+  display: flex;
+  gap: 8px;
+}
+
 main {
   padding: 10px;
   display: flex;
