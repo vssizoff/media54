@@ -31,3 +31,16 @@ export type MediaFile = CollectionFile & {
     playing: boolean,
     editing: boolean
 };
+
+export type VideoInfo = {
+    width: number;
+    height: number;
+    duration: number;
+    fps: number;
+};
+
+export type VideoFrame = {
+    data: Uint8Array;
+    width: number;
+    height: number;
+}
