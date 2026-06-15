@@ -25,7 +25,9 @@ type CommandType = {
   slide: number
 };
 
-onMounted(() => {
+onMounted(async () => {
+  // const wjs = await import('wcjs-player');
+  // console.log(wjs);
   window.electron.ipcRenderer.on("slide", (_, command: CommandType) => {
     console.log(command);
     if (command.type === "open") {
@@ -37,7 +39,12 @@ onMounted(() => {
         type.value = command.fileType;
         if (command.fileType === "video") {
           currentTime.value = command.timecode;
-          setTimeout(() => {
+          setTimeout(async () => {
+            console.log(videoComponent.value);
+            // const player = new wjs.default(videoComponent.value).addPlayer({
+            //   autoplay: true,
+            //   wcjs: await import("wcjs-prebuilt")
+            // });
             if (videoComponent.value) videoComponent.value.currentTime = currentTime.value;
             if (command.play) videoComponent.value?.play();
           }, 0.1);
@@ -75,9 +82,10 @@ watch(currentTime, value => {
 <template>
   <div>
     <main ref="container">
-      <video v-if="type === 'video'" ref="videoComponent" muted>
-        <source :src="src">
-      </video>
+<!--      <video v-if="type === 'video'" ref="videoComponent" muted height="auto">-->
+<!--        <source :src="src">-->
+<!--      </video>-->
+      <div v-if="type === 'video'" ref="videoComponent" class="player"/>
       <img v-if="type === 'image'" :src="src">
       <img v-if="type === 'pdf'" :src="`${src}/${currentSlide}.png`">
     </main>

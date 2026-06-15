@@ -1,4 +1,4 @@
-appId: com.sizoff.media54
+bun appId: com.sizoff.media54
 productName: media54
 directories:
   buildResources: build

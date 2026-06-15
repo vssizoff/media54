@@ -8,6 +8,10 @@ import * as Path from "node:path";
 import * as fs from "node:fs";
 import {homedir} from "node:os";
 import { pdf } from "pdf-to-img";
+import remoteMain from "@electron/remote/main";
+
+remoteMain.initialize();
+process.env.VLC_PLUGIN_PATH = "/usr/lib/vlc/plugins";
 
 let secondaryWindows: Array<BrowserWindow> = [];
 
@@ -33,6 +37,8 @@ function createPresentationWindow(screenId: number): void {
     },
     title: "Media54 presentation"
   })
+
+  remoteMain.enable(window.webContents);
 
   window.on('ready-to-show', () => {
     window.show()
@@ -84,6 +90,8 @@ function createWindow(): BrowserWindow {
     },
     title: "Media54"
   })
+
+  remoteMain.enable(mainWindow.webContents);
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -249,11 +257,15 @@ app.whenReady().then(async () => {
     console.log(collectionDir);
   });
 
+  ipcMain.handle("createPlayer", (options) => {
+    return require("wcjs-prebuilt").createPlayer(options);
+  });
+
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
+  });
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common
