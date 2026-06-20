@@ -9,7 +9,7 @@ import * as fs from "node:fs";
 import {homedir} from "node:os";
 import {pdf} from "pdf-to-img";
 import remoteMain from "@electron/remote/main";
-import VideoPlayer from "./videoPlayer";
+import {killPlayers, startVideoServer} from "./videoPlayer";
 
 remoteMain.initialize();
 process.env.VLC_PLUGIN_PATH = "/usr/lib/vlc/plugins";
@@ -166,7 +166,10 @@ app.whenReady().then(async () => {
   // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
-  })
+  });
+
+  startVideoServer();
+  app.on("before-quit", killPlayers);
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'));
@@ -256,33 +259,6 @@ app.whenReady().then(async () => {
   ipcMain.handle("newCollection", async () => {
     collectionDir = Path.join(DATA_DIR, `${await newIndexedFile(DATA_DIR)}`);
     console.log(collectionDir);
-  });
-
-  ipcMain.handle("createPlayer", (event) => {
-    const id = crypto.randomUUID();
-    const player = new VideoPlayer();
-
-    player.onFrame(frame => {
-      event.sender.send(`video-frame-${id}`, frame);
-    });
-
-    ipcMain.handle(`video-load-${id}`, async (_, filePath) => {
-      return await player.loadVideo(filePath);
-    });
-
-    ipcMain.handle(`video-play-${id}`, (_, startPosition) => {
-      player.play(startPosition);
-    });
-
-    ipcMain.handle(`video-stop-${id}`, () => {
-      player.stop();
-    });
-
-    ipcMain.handle(`video-seek-${id}`, (_, position) => {
-      player.seek(position);
-    });
-
-    return id;
   });
 
   app.on('activate', function () {

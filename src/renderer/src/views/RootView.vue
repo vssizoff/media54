@@ -236,7 +236,7 @@ const contextMenuItems = ref([
 <template>
   <main>
     <Menu :model="menuItems"/>
-    <Test/>
+    <Test filePath="/home/sizoff/.media54/0/4.mp4"/>
     <div class="media">
       <header class="collection">
         <header class="collectionHeader">

@@ -1,129 +1,265 @@
 <template>
-  <div class="video-container">
-    <canvas ref="videoCanvas" :width="videoWidth" :height="videoHeight"></canvas>
+  <div class="player-container">
+    <div class="video-wrapper">
+      <video
+          ref="videoPlayer"
+          class="video-element"
+          @timeupdate="onTimeUpdate"
+          @loadedmetadata="onMetadataLoaded"
+          @error="onError"
+      ></video>
+      <div v-if="isLoading" class="loading-overlay">Загрузка...</div>
+    </div>
+
     <div class="controls">
-      <button @click="play">Play</button>
-      <button @click="stop">Stop</button>
+      <button @click="togglePlay" :disabled="!isReady">
+        {{ isPlaying ? '⏸' : '▶' }}
+      </button>
+      <button @click="stop" :disabled="!isReady">⏹</button>
+
       <input
           type="range"
-          v-model="seekPosition"
+          v-model.number="currentTime"
           :max="duration"
-          @change="seek"
+          step="0.1"
+          :disabled="!isReady"
+          @input="onSeekInput"
+          @change="onSeekChange"
+          class="seek-bar"
       />
+
+      <span class="time-display">
+        {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+      </span>
+
+      <button @click="toggleMute">
+        {{ isMuted ? '🔇' : '🔊' }}
+      </button>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import {onMounted, onUnmounted, ref} from 'vue';
-import {type VideoFrame, type VideoInfo} from "@renderer/types";
+<script setup>
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 
-const videoCanvas = ref<HTMLCanvasElement>();
-const videoWidth = ref(1280);
-const videoHeight = ref(720);
-const duration = ref(0);
-const fps = ref(0);
-const playerId = ref<number>();
-
-const seekPosition = ref(0);
-let ctx: CanvasRenderingContext2D | null = null;
-let animationFrameId: NodeJS.Timeout | null = null;
-
-let frameQueue: Array<VideoFrame> = [];
-
-onMounted(async () => {
-  if (!videoCanvas.value) return;
-  ctx = videoCanvas.value.getContext('2d');
-
-  playerId.value = await window.electron.ipcRenderer.invoke("createPlayer");
-
-  window.electron.ipcRenderer.on(`video-frame-${playerId.value}`, (_, frame: VideoFrame) => {
-    // console.log(frame);
-    frameQueue.push(frame);
-    if (!animationFrameId) {
-      // renderNextFrame();
-      animationFrameId = setInterval(() => renderNextFrame(), 1000 / fps.value);
-    }
-  })
-
-  // Загрузка видео (пример)
-  const info: VideoInfo = await window.electron.ipcRenderer.invoke(`video-load-${playerId.value}`, '/home/sizoff/.media54/3/3.mp4');
-  videoWidth.value = info.width;
-  videoHeight.value = info.height;
-  duration.value = info.duration;
-  fps.value = info.fps;
+// Пропсы — путь к файлу и опциональный заголовок
+const props = defineProps({
+  filePath: {
+    type: String,
+    required: true
+  },
+  title: {
+    type: String,
+    default: ''
+  }
 });
 
-function renderNextFrame() {
-  console.log("frame");
-  if (!ctx) return;
-  if (frameQueue.length === 0) {
-    animationFrameId = null;
-    return;
+const videoPlayer = ref(null);
+const isPlaying = ref(false);
+const isReady = ref(false);
+const isLoading = ref(true);
+const isMuted = ref(false);
+const currentTime = ref(0);
+const duration = ref(0);
+
+let playerId = null;
+let isSeeking = false;
+
+onMounted(async () => {
+  try {
+    // 1. Создаем уникальный ID плеера
+    playerId = await window.electron.ipcRenderer.invoke('player-create');
+
+    // 2. Получаем метаданные
+    const info = await window.electron.ipcRenderer.invoke('player-get-info', playerId, props.filePath);
+    duration.value = info.duration;
+
+    // 3. Получаем URL для стриминга
+    const streamUrl = await window.electron.ipcRenderer.invoke('player-get-url', playerId, props.filePath, 0);
+
+    // 4. Назначаем src и ждем загрузки
+    videoPlayer.value.src = streamUrl;
+    videoPlayer.value.load();
+  } catch (err) {
+    console.error('Failed to initialize player:', err);
+    isLoading.value = false;
   }
+});
 
-  const frame = frameQueue.shift();
-  if (!frame) return;
-
-  // Создаем ImageData из RGB данных
-  const imageData = ctx.createImageData(frame.width || videoWidth.value, frame.height || videoHeight.value);
-
-  // Конвертируем RGB в RGBA (добавляем alpha канал)
-  for (let i = 0, j = 0; i < frame.data.length; i += 3, j += 4) {
-    imageData.data[j] = frame.data[i];     // R
-    imageData.data[j + 1] = frame.data[i + 1]; // G
-    imageData.data[j + 2] = frame.data[i + 2]; // B
-    imageData.data[j + 3] = 255;           // A
+function onMetadataLoaded() {
+  isReady.value = true;
+  isLoading.value = false;
+  // Длительность может быть Infinity для live-стримов или пока не загрузилась полностью
+  if (videoPlayer.value.duration && isFinite(videoPlayer.value.duration)) {
+    duration.value = videoPlayer.value.duration;
   }
-
-  // console.log(frame.width || videoWidth.value, frame.height || videoHeight.value, imageData);
-  ctx.putImageData(imageData, 0, 0);
-
-  // Рендерим следующий кадр с учетом FPS
-  // animationFrameId = requestAnimationFrame(renderNextFrame);
-  // animationFrameId = requestAnimationFrame(() => undefined);
-  // animationFrameId = 1;
-  // setTimeout(renderNextFrame, 0.1);
 }
 
-async function play() {
-  await window.electron.ipcRenderer.invoke(`video-play-${playerId.value}`, 0);
+function onError(e) {
+  console.error('Video error:', e);
+  isLoading.value = false;
+}
+
+function togglePlay() {
+  if (!videoPlayer.value) return;
+  if (videoPlayer.value.paused) {
+    videoPlayer.value.play();
+    isPlaying.value = true;
+  } else {
+    videoPlayer.value.pause();
+    isPlaying.value = false;
+  }
 }
 
 async function stop() {
-  await window.electron.ipcRenderer.invoke(`video-stop-${playerId.value}`);
-  frameQueue = [];
+  if (!videoPlayer.value) return;
+  videoPlayer.value.pause();
+  isPlaying.value = false;
+  currentTime.value = 0;
+
+  // Перезапускаем стрим с начала
+  await window.electron.ipcRenderer.invoke('player-stop', playerId);
+  const newUrl = await window.electron.ipcRenderer.invoke('player-get-url', playerId, props.filePath, 0);
+  videoPlayer.value.src = newUrl;
 }
 
-async function seek() {
-  await window.electron.ipcRenderer.invoke(`video-seek-${playerId.value}`, seekPosition.value);
+function onTimeUpdate() {
+  if (!isSeeking && videoPlayer.value) {
+    currentTime.value = videoPlayer.value.currentTime;
+  }
 }
+
+function onSeekInput() {
+  isSeeking = true;
+}
+
+async function onSeekChange() {
+  isSeeking = false;
+  if (!videoPlayer.value) return;
+
+  const wasPlaying = !videoPlayer.value.paused;
+
+  // Останавливаем текущий поток
+  await window.electron.ipcRenderer.invoke('player-stop', playerId);
+
+  // Получаем новый URL с параметром seek
+  const newUrl = await window.electron.ipcRenderer.invoke('player-get-url', playerId, props.filePath, currentTime.value);
+
+  videoPlayer.value.src = newUrl;
+
+  videoPlayer.value.onloadedmetadata = () => {
+    videoPlayer.value.currentTime = 0;
+    if (wasPlaying) {
+      videoPlayer.value.play();
+      isPlaying.value = true;
+    }
+  };
+}
+
+function toggleMute() {
+  if (!videoPlayer.value) return;
+  videoPlayer.value.muted = !videoPlayer.value.muted;
+  isMuted.value = videoPlayer.value.muted;
+}
+
+function formatTime(seconds) {
+  if (!seconds || !isFinite(seconds)) return '0:00';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// Реакция на смену файла
+watch(() => props.filePath, async (newPath) => {
+  if (!playerId) return;
+  await window.electron.ipcRenderer.invoke('player-stop', playerId);
+  const newUrl = await window.electron.ipcRenderer.invoke('player-get-url', playerId, newPath, 0);
+  videoPlayer.value.src = newUrl;
+  isLoading.value = true;
+});
 
 onUnmounted(() => {
-  if (animationFrameId) {
-    // cancelAnimationFrame(animationFrameId);
-    clearInterval(animationFrameId);
+  if (playerId) {
+    window.electron.ipcRenderer.invoke('player-destroy', playerId);
   }
-  window.electron.ipcRenderer.removeAllListeners(`video-frame-${playerId.value}`);
 });
 </script>
 
 <style scoped>
-.video-container {
-  //display: flex;
-  //flex-direction: column;
-  //align-items: center;
+.player-container {
+  width: 100%;
+  max-width: 800px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 10px;
 }
 
-canvas {
-  //border: 1px solid #ccc;
-  //max-width: 100%;
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  background: #000;
+  aspect-ratio: 16 / 9;
+}
+
+.video-element {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px 20px;
+  border-radius: 4px;
 }
 
 .controls {
-  margin-top: 10px;
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: #2a2a2a;
+}
+
+.controls button {
+  background: #444;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.controls button:hover:not(:disabled) {
+  background: #555;
+}
+
+.controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.seek-bar {
+  flex-grow: 1;
+  cursor: pointer;
+}
+
+.time-display {
+  color: #ccc;
+  font-size: 13px;
+  font-family: monospace;
+  min-width: 100px;
+  text-align: center;
 }
 </style>
