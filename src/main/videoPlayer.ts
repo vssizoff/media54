@@ -115,7 +115,7 @@ ipcMain.handle('player-create', () => {
 
 // Получить метаданные видео (длительность, разрешение)
 ipcMain.handle('player-get-info', async (_, _0, filePath: string) => {
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
         ffmpeg.ffprobe(filePath, (err, metadata) => {
             if (err) return reject(err);
             const videoStream = metadata.streams.find(s => s.codec_type === 'video');
