@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, onUnmounted, ref, shallowRef, watch} from 'vue';
+import {onMounted, onUnmounted, ref, watch} from 'vue';
 import PlayerController from "@renderer/components/player/playerController";
 import VideoPlayer from "@renderer/components/player/VideoPlayer.vue";
 
@@ -51,7 +51,7 @@ const props = defineProps({
 
 const videoPlayer = ref<HTMLVideoElement>();
 const isMuted = ref(false);
-const controller = shallowRef<PlayerController>(new PlayerController());
+const controller = ref<PlayerController>(new PlayerController());
 
 onMounted(async () => {
   await controller.value.create(props.filePath);

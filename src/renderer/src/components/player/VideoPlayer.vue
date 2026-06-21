@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import {onMounted, type PropType, ref} from "vue";
-import PlayerController from "./playerController";
 
 const props = defineProps({
   controller: {
-    type: Object as PropType<PlayerController>,
+    type: Object as PropType<{init: (el: HTMLVideoElement | undefined) => void}>,
     required: true
   }
 });
@@ -17,7 +16,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <video ref="videoPlayer"/>
+  <video ref="videoPlayer" muted/>
 </template>
 
 <style scoped>
