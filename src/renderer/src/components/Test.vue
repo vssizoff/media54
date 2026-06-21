@@ -242,7 +242,7 @@ async function fetchStream(seekTime = 0) {
         if (bufferedEnd > 1) {
           isReady.value = true;
           isLoading.value = false;
-          console.log('[Player] Ready to play');
+          console.log('[Controls] Ready to play');
         }
       }
     }

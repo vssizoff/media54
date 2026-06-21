@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {ref, watch} from "vue";
-import Player from "@renderer/components/players/Player.vue";
+import Controls from "./Controls.vue";
 
 const props = defineProps({
   src: {
@@ -74,7 +74,7 @@ function fadeOutPause(left: number = 1000) {
         @timeupdate="onTimeUpdate"
         @loadedmetadata="onLoadedMetadata"
     />
-    <Player
+    <Controls
         v-if="props.src"
         :playing="props.playing"
         @update:playing="emit('update:playing', $event)"

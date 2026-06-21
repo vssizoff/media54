@@ -12,14 +12,14 @@ import {
   Badge,
   ContextMenu
 } from "primevue";
-import AudioPlayer from "@renderer/components/players/AudioPlayer.vue";
+import AudioControls from "../components/controls/AudioControls.vue";
 import type {CollectionFile, MediaFile, UploadedFile} from "@renderer/types.js";
 import * as mm from "music-metadata";
-import VideoPlayer from "@renderer/components/players/VideoPlayer.vue";
-import ImagePlayer from "@renderer/components/players/ImagePlayer.vue";
+import VideoControls from "../components/controls/VideoControls.vue";
+import ImageControls from "../components/controls/ImageControls.vue";
 import blockIcon from "@renderer/assets/stop.svg";
 import Slide from "@renderer/components/Slide.vue";
-import PresentationPlayer from "@renderer/components/players/PresentationPlayer.vue";
+import PresentationControls from "../components/controls/PresentationControls.vue";
 
 import addIcon from "@renderer/assets/add.svg";
 import textIcon from "@renderer/assets/text.svg";
@@ -32,7 +32,6 @@ import imageIcon from "@renderer/assets/image.svg";
 import presentationIcon from "@renderer/assets/presentation.svg";
 import otherIcon from "@renderer/assets/other.svg";
 import Test from "@renderer/components/Test.vue";
-import Test2 from "@renderer/components/Test2.vue";
 
 const displays = ref<Array<string>>([]);
 const mediaFiles = ref<Array<MediaFile>>([]);
@@ -300,7 +299,7 @@ const contextMenuItems = ref([
               :draggable="false"
           >
             <div class="players" v-if="type != 'label' && type != 'other'">
-              <AudioPlayer
+              <AudioControls
                   v-if="type === 'audio'"
                   draggable="false"
                   :src="file"
@@ -309,7 +308,7 @@ const contextMenuItems = ref([
                   :volume="mediaFiles[index].volume"
                   @update:volume="mediaFiles[index].volume = $event; saveCollection()"
               />
-              <VideoPlayer
+              <VideoControls
                   v-if="type === 'video'"
                   draggable="false"
                   :src="file"
@@ -321,7 +320,7 @@ const contextMenuItems = ref([
                   :volume="mediaFiles[index].volume"
                   @update:volume="mediaFiles[index].volume = $event; saveCollection()"
               />
-              <ImagePlayer
+              <ImageControls
                   v-if="type === 'image'"
                   draggable="false"
                   :src="file"
@@ -330,7 +329,7 @@ const contextMenuItems = ref([
                   :opened="openedSlide === index"
                   @open="openedSlide = index"
               />
-              <PresentationPlayer
+              <PresentationControls
                   v-if="type === 'presentation'"
                   draggable="false"
                   :src="file"

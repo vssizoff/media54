@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {onMounted, ref, watch} from "vue";
-import Player from "@renderer/components/players/Player.vue";
+import Controls from "./Controls.vue";
 
 const props = defineProps({
   src: {
@@ -151,7 +151,7 @@ onMounted(() => {
         <source :src="src">
       </video>
     </div>
-    <Player
+    <Controls
         class="player"
         isVideo
         v-if="props.src"
