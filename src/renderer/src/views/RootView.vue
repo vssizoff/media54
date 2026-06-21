@@ -32,6 +32,7 @@ import imageIcon from "@renderer/assets/image.svg";
 import presentationIcon from "@renderer/assets/presentation.svg";
 import otherIcon from "@renderer/assets/other.svg";
 import Test from "@renderer/components/Test.vue";
+import Test2 from "@renderer/components/Test2.vue";
 
 const displays = ref<Array<string>>([]);
 const mediaFiles = ref<Array<MediaFile>>([]);
@@ -237,6 +238,7 @@ const contextMenuItems = ref([
   <main>
     <Menu :model="menuItems"/>
     <Test filePath="/home/sizoff/.media54/0/4.mp4"/>
+<!--    <Test2/>-->
     <div class="media">
       <header class="collection">
         <header class="collectionHeader">

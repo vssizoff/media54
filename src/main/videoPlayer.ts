@@ -43,7 +43,7 @@ export function startVideoServer() {
         }
 
         res.writeHead(200, {
-            'Content-Type': 'video/webm',
+            'Content-Type': 'video/mp4',
             'Connection': 'keep-alive',
             'Cache-Control': 'no-cache',
             'Access-Control-Allow-Origin': '*'
@@ -53,12 +53,23 @@ export function startVideoServer() {
         const ffmpegProcess = ffmpeg(filePath)
             .seekInput(seekTime)
             .outputOptions([
-                '-c:v libvpx-vp9',
-                '-deadline realtime',
-                '-cpu-used 4',
-                '-c:a libopus',
-                '-f webm',
-                '-movflags frag_keyframe+empty_moov'
+                '-c:v libx264',
+                '-preset veryfast',          // Баланс между скоростью и качеством (было ultrafast)
+                '-tune zerolatency',
+                '-profile:v high',           // High profile для лучшего качества (было main)
+                '-level 4.1',
+                '-crf 20',                   // Constant Rate Factor: 18-23 = хорошее качество, 20 = оптимально
+                '-maxrate 8000k',            // Максимальный битрейт 8 Mbps (было 3000k)
+                '-bufsize 16000k',           // Буфер для стабилизации битрейта
+                '-g 48',
+                '-keyint_min 48',
+                '-sc_threshold 0',
+                '-c:a aac',
+                '-b:a 192k',                 // Улучшенный аудио битрейт (было 128k)
+                '-ar 48000',                 // Частота дискретизации 48kHz
+                '-f mp4',
+                '-movflags frag_keyframe+empty_moov+default_base_moof',
+                '-frag_duration 2000000'
             ])
             .on('error', (err) => {
                 // Ошибки при остановке/перемотке — это нормально

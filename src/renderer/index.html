@@ -10,9 +10,9 @@
           script-src * data:;
           worker-src * blob:;
           style-src * 'unsafe-inline';
-          connect-src * file:;
+          connect-src * file: http://127.0.0.1:*;
           img-src 'self' data: file:;
-          media-src 'self' file: http://127.0.0.1:*;
+          media-src 'self' file: http://127.0.0.1:* blob:;
         "
       />
   </head>
