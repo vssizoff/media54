@@ -1,11 +1,7 @@
 <template>
   <div class="player-container">
     <div class="video-wrapper">
-      <video
-          ref="videoPlayer"
-          class="video-element"
-          @timeupdate="onTimeUpdate"
-      ></video>
+      <VideoPlayer class="video-element" :controller="controller"/>
       <div v-if="controller?.isLoading" class="loading-overlay">Буферизация...</div>
     </div>
 
@@ -38,8 +34,9 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, onUnmounted, ref, watch} from 'vue';
+import {onMounted, onUnmounted, ref, shallowRef, watch} from 'vue';
 import PlayerController from "@renderer/components/player/playerController";
+import VideoPlayer from "@renderer/components/player/VideoPlayer.vue";
 
 const props = defineProps({
   filePath: {
@@ -54,40 +51,22 @@ const props = defineProps({
 
 const videoPlayer = ref<HTMLVideoElement>();
 const isMuted = ref(false);
-const controller = ref<PlayerController>();
+const controller = shallowRef<PlayerController>(new PlayerController());
 
 onMounted(async () => {
-  controller.value = await PlayerController.create(props.filePath);
-  controller.value?.init(videoPlayer.value);
+  await controller.value.create(props.filePath);
 });
 
 function togglePlay() {
-  controller.value?.toggle();
-}
-
-// async function stop() {
-//   if (!videoPlayer.value) return;
-//   videoPlayer.value.pause();
-//   isPlaying.value = false;
-//   currentTime.value = 0;
-//
-//   await window.electron.ipcRenderer.invoke('player-stop', playerId);
-//   await initMediaSource(0);
-// }
-
-function onTimeUpdate() {
-  if (!controller.value) return;
-  if (!controller.value?.isSeeking && videoPlayer.value) {
-    controller.value.currentTime = videoPlayer.value.currentTime;
-  }
+  controller.value.toggle();
 }
 
 function onSeekInput() {
-  controller.value?.seekInput()
+  controller.value.seekInput()
 }
 
 async function onSeekChange(event) {
-  controller.value?.seekChange(Number(event.target.value));
+  await controller.value.seekChange(Number(event.target.value));
 }
 
 function toggleMute() {
@@ -107,13 +86,12 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-watch(() => props.filePath, async (newPath) => {
-  controller.value = await PlayerController.create(newPath);
-  controller.value?.init(videoPlayer.value);
+watch(() => props.filePath, async newPath => {
+  controller.value.changeSource(newPath);
 });
 
 onUnmounted(() => {
-  controller.value?.cleanup();
+  controller.value.cleanup();
 });
 </script>
 

@@ -12,12 +12,22 @@ export default class PlayerController {
     protected isAppending: boolean = false;
     protected pendingBuffers: Array<Uint8Array<ArrayBuffer>> = [];
     protected sourceBuffer: SourceBuffer | null = null;
+    protected src: string = "";
+    protected playerId: string = "";
+    public duration: number = 0;
+    private onCreated: () => void = () => {};
+    private created = false;
 
-    static async create(src: string) {
+    async create(src: string) {
+        this.created = false;
         const playerId: string = await window.electron.ipcRenderer.invoke('player-create');
-        console.log('player-get-info', playerId, src);
         const info = await window.electron.ipcRenderer.invoke('player-get-info', playerId, src);
-        return new PlayerController(src, playerId, info.duration);
+        this.src = src;
+        this.playerId = playerId;
+        this.duration = info.duration;
+        this.created = true;
+        this.onCreated();
+        this.onCreated = () => {};
     }
 
     private processPendingBuffers() {
@@ -175,7 +185,7 @@ export default class PlayerController {
         this.fetchStream(seekTime);
     }
 
-    protected initMediaSource(seekTime = 0) {
+    initMediaSource(seekTime = 0) {
         if (!this.element) return;
 
         // Очистка предыдущего состояния
@@ -216,18 +226,20 @@ export default class PlayerController {
         });
     }
 
-    constructor(
-        protected src: string,
-        protected playerId: string,
-        public duration: number
-    ) {}
-
     init(element: HTMLVideoElement | HTMLAudioElement | undefined) {
-        this.element = element;
-        this.element?.addEventListener("timeupdate", event => {
-            this.currentTime = this.seeked + (event.target as HTMLVideoElement | HTMLAudioElement)?.currentTime;
-        });
-        this.initMediaSource();
+        const old = this.onCreated;
+        this.onCreated = () => {
+            old();
+            this.element = element;
+            this.element?.addEventListener("timeupdate", event => {
+                this.currentTime = this.seeked + (event.target as HTMLVideoElement | HTMLAudioElement)?.currentTime;
+            });
+            this.initMediaSource();
+        }
+        if (this.created) {
+            this.onCreated();
+            this.onCreated = () => {};
+        }
     }
 
     play() {
@@ -285,7 +297,7 @@ export default class PlayerController {
 
     }
 
-    cleanup() {
+    async cleanup() {
         if (this.cleanupInterval) {
             clearInterval(this.cleanupInterval);
         }
@@ -293,7 +305,15 @@ export default class PlayerController {
             this.fetchController.abort();
         }
         if (this.playerId) {
-            window.electron.ipcRenderer.invoke('player-destroy', this.playerId);
+            await window.electron.ipcRenderer.invoke('player-destroy', this.playerId);
         }
+        this.seeked = 0;
+        this.currentTime = 0;
+    }
+
+    async changeSource(newPath: string) {
+        await this.cleanup();
+        await this.create(newPath);
+        this.initMediaSource();
     }
 }
