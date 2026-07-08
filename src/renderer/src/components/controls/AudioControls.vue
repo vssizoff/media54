@@ -29,7 +29,6 @@ watch(props, value => {
 
 watch(volume, value => {
   if (audioRef.value) audioRef.value.volume = value;
-  emit("update:volume", value);
 });
 
 function onTimeUpdate() {
@@ -58,6 +57,7 @@ function fadeOutPause(left: number = 1000) {
   if (left <= 0) {
     audioRef.value?.pause();
     emit('update:playing', false);
+    if (audioRef.value) audioRef.value.volume = volume.value;
     return;
   }
   if (audioRef.value) audioRef.value.volume = left / 1000 * volume.value;
@@ -85,6 +85,7 @@ function fadeOutPause(left: number = 1000) {
         @disableDrag="emit('disableDrag')"
         @fadeIn="audioRef?.play(); emit('update:playing', true); fadeIn()"
         @fadeOutPause="fadeOutPause"
+        @volumeChanged="emit('update:volume', volume)"
     />
   </div>
 </template>

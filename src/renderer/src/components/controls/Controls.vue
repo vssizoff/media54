@@ -40,6 +40,7 @@ const emit = defineEmits<{
   (e: "disableDrag"): void
   (e: "fadeIn"): void
   (e: "fadeOutPause"): void
+  (e: "volumeChanged"): void
 }>();
 
 const volumePopover = useTemplateRef("volumePopover");
@@ -76,6 +77,7 @@ function formatTime(seconds: number): string {
               :min="0" :max="1" :step="0.01"
               @mousedown.stop="emit('disableDrag')"
               @touchstart.stop="emit('disableDrag')"
+              @slideend="emit('volumeChanged')"
           />
         </Popover>
       </div>
