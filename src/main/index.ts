@@ -175,7 +175,7 @@ app.whenReady().then(async () => {
   ipcMain.on('ping', () => console.log('pong'));
 
   ipcMain.handle("displays", () => {
-    console.log(screen.getAllDisplays());
+    // console.log(screen.getAllDisplays());
     return screen.getAllDisplays();
   });
 
@@ -249,7 +249,11 @@ app.whenReady().then(async () => {
   ipcMain.handle("collection", async (_, collectionDir_) => {
     collectionDir = collectionDir_;
     console.log(collectionDir);
-    return JSON.parse(await fs.promises.readFile(Path.join(collectionDir_, "collection.json"), {encoding: "utf8"}));
+    const collection = JSON.parse(await fs.promises.readFile(Path.join(collectionDir_, "collection.json"), {encoding: "utf8"}));
+    [...secondaryWindows, mainWindow].forEach(window => {
+      if (!window.isDestroyed()) window.webContents.send("collection", collection);
+    });
+    return collection;
   });
 
   ipcMain.handle("deleteCollection", async (_, collectionDir) => {

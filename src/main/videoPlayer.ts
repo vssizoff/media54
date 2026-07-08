@@ -9,14 +9,12 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 let server: http.Server | null = null;
 let serverPort: number = 0;
 
-// Хранилище активных плееров: Map<playerId, { process, filePath }>
 const activePlayers = new Map<string, {process: FfmpegCommand | null, filePath: string | null}>();
 
 export function startVideoServer() {
     server = http.createServer((req, res) => {
         if (!req.url) return;
 
-        // Парсим URL: /stream/:playerId?file=...&seek=...
         const urlMatch = req.url.match(/^\/stream\/([^/?]+)(\?.*)?$/);
 
         if (!urlMatch) {
@@ -36,7 +34,6 @@ export function startVideoServer() {
             return;
         }
 
-        // Убиваем предыдущий процесс этого плеера (например, при перемотке)
         const existing = activePlayers.get(playerId);
         if (existing && existing.process) {
             existing.process.kill('SIGKILL');
@@ -49,32 +46,29 @@ export function startVideoServer() {
             'Access-Control-Allow-Origin': '*'
         });
 
-        // Запускаем новый FFmpeg-процесс для этого плеера
+        // Более безопасные параметры кодирования
         const ffmpegProcess = ffmpeg(filePath)
             .seekInput(seekTime)
             .outputOptions([
                 '-c:v libx264',
-                '-preset veryfast',          // Баланс между скоростью и качеством (было ultrafast)
+                '-preset veryfast',
                 '-tune zerolatency',
-                '-profile:v high',           // High profile для лучшего качества (было main)
-                '-level 4.1',
-                '-crf 20',                   // Constant Rate Factor: 18-23 = хорошее качество, 20 = оптимально
-                '-maxrate 8000k',            // Максимальный битрейт 8 Mbps (было 3000k)
-                '-bufsize 16000k',           // Буфер для стабилизации битрейта
+                '-crf 23',                    // Стандартное качество (было 20)
+                '-maxrate 6000k',             // Умеренный битрейт (было 8000k)
+                '-bufsize 12000k',
+                '-vf scale=iw:-2',            // Масштабирование для совместимости
+                '-pix_fmt yuv420p',           // Обязательный формат пикселей для совместимости
                 '-g 48',
-                '-keyint_min 48',
-                '-sc_threshold 0',
                 '-c:a aac',
-                '-b:a 192k',                 // Улучшенный аудио битрейт (было 128k)
-                '-ar 48000',                 // Частота дискретизации 48kHz
+                '-b:a 128k',
+                '-ar 44100',
+                '-ac 2',                      // Стерео
                 '-f mp4',
-                '-movflags frag_keyframe+empty_moov+default_base_moof',
-                '-frag_duration 2000000'
+                '-movflags frag_keyframe+empty_moov+default_base_moof'
             ])
             .on('error', (err) => {
-                // Ошибки при остановке/перемотке — это нормально
                 if (!err.message.includes('SIGKILL') && !err.message.includes('SIGTERM')) {
-                    console.log(`[Player ${playerId}] FFmpeg error:`, err.message);
+                    console.error(`[Player ${playerId}] FFmpeg error:`, err.message);
                 }
             })
             .on('end', () => {
@@ -83,13 +77,11 @@ export function startVideoServer() {
 
         ffmpegProcess.pipe(res, { end: true });
 
-        // Сохраняем процесс в хранилище
         activePlayers.set(playerId, {
             process: ffmpegProcess,
             filePath: filePath
         });
 
-        // Если клиент отключился — убиваем процесс
         req.on('close', () => {
             if (ffmpegProcess) {
                 ffmpegProcess.kill('SIGKILL');
@@ -104,16 +96,12 @@ export function startVideoServer() {
     });
 }
 
-// === IPC обработчики ===
-
-// Получить уникальный ID для нового плеера
 ipcMain.handle('player-create', () => {
     const playerId = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     activePlayers.set(playerId, { process: null, filePath: null });
     return playerId;
 });
 
-// Получить метаданные видео (длительность, разрешение)
 ipcMain.handle('player-get-info', async (_, _0, filePath: string) => {
     return await new Promise((resolve, reject) => {
         ffmpeg.ffprobe(filePath, (err, metadata) => {
@@ -131,9 +119,7 @@ ipcMain.handle('player-get-info', async (_, _0, filePath: string) => {
     });
 });
 
-// Получить URL для стриминга конкретного плеера
 ipcMain.handle('player-get-url', (_, playerId, filePath, seekTime = 0) => {
-    // Обновляем путь в хранилище
     const existing = activePlayers.get(playerId);
     if (existing) {
         existing.filePath = filePath;
@@ -144,7 +130,6 @@ ipcMain.handle('player-get-url', (_, playerId, filePath, seekTime = 0) => {
     return `http://127.0.0.1:${serverPort}/stream/${encodeURIComponent(playerId)}?file=${encodeURIComponent(filePath)}&seek=${seekTime}`;
 });
 
-// Остановить конкретный плеер
 ipcMain.handle('player-stop', (_, playerId) => {
     const player = activePlayers.get(playerId);
     if (player && player.process) {
@@ -154,7 +139,6 @@ ipcMain.handle('player-stop', (_, playerId) => {
     return true;
 });
 
-// Удалить плеер (при unmount компонента)
 ipcMain.handle('player-destroy', (_, playerId) => {
     const player = activePlayers.get(playerId);
     if (player && player.process) {

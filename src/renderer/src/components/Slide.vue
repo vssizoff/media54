@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import {onMounted, ref, useTemplateRef, watch} from "vue";
+import type {CollectionFile} from "@renderer/types";
+import PlayerController from "@renderer/components/player/playerController";
+import VideoPlayer from "@renderer/components/player/VideoPlayer.vue";
 
 const videoComponent = useTemplateRef<HTMLVideoElement>("videoComponent");
 
-const src = ref("");
-const type = ref("");
 const currentTime = ref(0);
 const currentSlide = ref(0);
 
 type CommandType = {
   type: "open",
-  file: string,
+  id: number,
   fileType: "video" | "image" | "pdf",
   timecode: number,
   play: boolean,
@@ -25,48 +26,71 @@ type CommandType = {
   slide: number
 };
 
+const files = ref<Array<CollectionFile>>([]);
+const filesMap = ref(new Map<number, CollectionFile>());
+const videoPlayers = ref(new Map<number, PlayerController>());
+const current = ref<number>();
+
 onMounted(async () => {
   // const wjs = await import('wcjs-player');
   // console.log(wjs);
   window.electron.ipcRenderer.on("slide", (_, command: CommandType) => {
     console.log(command);
     if (command.type === "open") {
-      videoComponent.value?.pause();
-      src.value = "";
-      type.value = "";
-      setTimeout(() => {
-        src.value = command.file;
-        type.value = command.fileType;
-        if (command.fileType === "video") {
-          currentTime.value = command.timecode;
-          setTimeout(async () => {
-            console.log(videoComponent.value);
-            if (videoComponent.value) videoComponent.value.currentTime = currentTime.value;
-            if (command.play) videoComponent.value?.play();
-          }, 0.1);
-        }
-        if (command.fileType === "pdf") {
-          currentSlide.value = command.slide;
-        }
-      }, 0.1);
+      current.value = command.id;
+      // videoComponent.value?.pause();
+      // src.value = "";
+      // type.value = "";
+      // setTimeout(() => {
+      //   src.value = command.file;
+      //   type.value = command.fileType;
+      //   if (command.fileType === "video") {
+      //     currentTime.value = command.timecode;
+      //     setTimeout(async () => {
+      //       console.log(videoComponent.value);
+      //       if (videoComponent.value) videoComponent.value.currentTime = currentTime.value;
+      //       if (command.play) videoComponent.value?.play();
+      //     }, 0.1);
+      //   }
+      //   if (command.fileType === "pdf") {
+      //     currentSlide.value = command.slide;
+      //   }
+      // }, 0.1);
+      if (command.fileType === "pdf") {
+        currentSlide.value = command.slide;
+      }
     }
     if (command.type === "close") {
-      videoComponent.value?.pause();
-      src.value = "";
-      type.value = "";
+      // videoComponent.value?.pause();
+      // src.value = "";
+      // type.value = "";
+      current.value = undefined;
     }
     if (command.type === "pause") {
-      videoComponent.value?.pause();
+      // videoComponent.value?.pause();
     }
     if (command.type === "resume") {
-      videoComponent.value?.play();
+      // videoComponent.value?.play();
+      videoPlayers.value.get(current.value ?? -1)?.play();
     }
     if (command.type === "seek") {
-      currentTime.value = command.timecode;
+      // currentTime.value = command.timecode;
     }
     if (command.type === "pdfSlide") {
       currentSlide.value = command.slide;
     }
+  });
+
+  window.electron.ipcRenderer.on("collection", async (_, collection) => {
+    files.value = collection.files;
+    filesMap.value = new Map(files.value.map(file => ([file.id, file])));
+    console.log(files.value.filter(file => file.type === "video"));
+    videoPlayers.value = new Map(files.value.filter(file => file.type === "video").map(file => {
+      let controller = new PlayerController();
+      console.log(file.file.slice(7));
+      controller.create(file.file.slice(7));
+      return [file.id, controller];
+    }));
   });
 });
 
@@ -78,11 +102,17 @@ watch(currentTime, value => {
 <template>
   <div>
     <main ref="container">
-      <video v-if="type === 'video'" ref="videoComponent" muted height="auto">
-        <source :src="src">
-      </video>
-      <img v-if="type === 'image'" :src="src">
-      <img v-if="type === 'pdf'" :src="`${src}/${currentSlide}.png`">
+      <template v-for="({id}) in files">
+        <template v-show="id == current">
+<!--          {{id}} {{filesMap.get(id)?.type}}-->
+<!--        <video v-if="type === 'video'" ref="videoComponent" muted height="auto">-->
+<!--          <source :src="src">-->
+<!--        </video>-->
+          <VideoPlayer :controller="videoPlayers.get(id)"/>
+          <img v-if="filesMap.get(id)?.type === 'image'" :src="filesMap.get(id)?.file">
+          <img v-if="filesMap.get(id)?.type === 'presentation'" :src="`${filesMap.get(id)?.file}/${currentSlide}.png`">
+        </template>
+      </template>
     </main>
   </div>
 </template>

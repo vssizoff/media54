@@ -9,7 +9,11 @@ const props = defineProps({
   },
   playing: Boolean,
   opened: Boolean,
-  volume: Number
+  volume: Number,
+  id: {
+    type: Number,
+    required: true
+  }
 });
 
 const emit = defineEmits<{
@@ -43,6 +47,7 @@ function updatePlaying(playing: boolean) {
       window.electron.ipcRenderer.invoke("slide", {
         type: "open",
         file: props.src,
+        id: props.id,
         timecode: currentTime.value,
         fileType: "video",
         play: true

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import {onMounted, type PropType, ref} from "vue";
+import {onMounted, type PropType, ref, watch} from "vue";
 
 const props = defineProps({
   controller: {
-    type: Object as PropType<{init: (el: HTMLVideoElement | undefined) => void}>,
+    type: Object as PropType<{init: (el: HTMLVideoElement | undefined) => void} | undefined>,
     required: true
   }
 });
@@ -11,7 +11,11 @@ const props = defineProps({
 const videoPlayer = ref<HTMLVideoElement>();
 
 onMounted(() => {
-  props.controller.init(videoPlayer.value);
+  if (props.controller) props.controller.init(videoPlayer.value);
+});
+
+watch(() => props.controller, () => {
+  if (props.controller) props.controller.init(videoPlayer.value);
 });
 </script>
 

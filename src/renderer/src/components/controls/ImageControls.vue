@@ -10,7 +10,11 @@ const props = defineProps({
     required: true
   },
   playing: Boolean,
-  opened: Boolean
+  opened: Boolean,
+  id: {
+    type: Number,
+    required: true
+  }
 });
 
 watch(props, value => {
@@ -30,6 +34,7 @@ function updatePlaying(playing: boolean) {
     window.electron.ipcRenderer.invoke("slide", {
       type: "open",
       file: props.src,
+      id: props.id,
       fileType: "image"
     });
   }

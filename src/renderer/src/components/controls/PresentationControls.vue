@@ -16,6 +16,10 @@ const props = defineProps({
   max: {
     type: Number,
     default: 1
+  },
+  id: {
+    type: Number,
+    required: true
   }
 });
 
@@ -39,6 +43,7 @@ function updatePlaying(playing: boolean) {
     window.electron.ipcRenderer.invoke("slide", {
       type: "open",
       file: props.src,
+      id: props.id,
       fileType: "pdf",
       slide: slide.value
     });

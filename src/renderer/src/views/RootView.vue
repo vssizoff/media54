@@ -31,7 +31,7 @@ import videoIcon from "@renderer/assets/video.svg";
 import imageIcon from "@renderer/assets/image.svg";
 import presentationIcon from "@renderer/assets/presentation.svg";
 import otherIcon from "@renderer/assets/other.svg";
-import Test from "@renderer/components/Test.vue";
+// import Test from "@renderer/components/Test.vue";
 
 const displays = ref<Array<string>>([]);
 const mediaFiles = ref<Array<MediaFile>>([]);
@@ -81,8 +81,10 @@ async function saveCollection() {
 }
 
 onMounted(async () => {
-  displays.value = (await window.electron.ipcRenderer.invoke("displays")).map(({label, isPrimary, id}) =>
-    label || (isPrimary ? "Primary display" : `Display ${id}`));
+  setInterval(async () => {
+    displays.value = (await window.electron.ipcRenderer.invoke("displays")).map(({label, isPrimary, id}) =>
+        label || (isPrimary ? "Primary display" : `Display ${id}`));
+  }, 1000);
   await loadCollections();
 });
 
@@ -236,7 +238,7 @@ const contextMenuItems = ref([
 <template>
   <main>
     <Menu :model="menuItems"/>
-    <Test filePath="/home/sizoff/.media54/0/4.mp4"/>
+<!--    <Test filePath="/home/sizoff/.media54/11/2.mov"/>-->
 <!--    <Test2/>-->
     <div class="media">
       <header class="collection">
@@ -319,6 +321,7 @@ const contextMenuItems = ref([
                   @close="openedSlide = -1"
                   :volume="mediaFiles[index].volume"
                   @update:volume="mediaFiles[index].volume = $event; saveCollection()"
+                  :id="id"
               />
               <ImageControls
                   v-if="type === 'image'"
@@ -328,6 +331,7 @@ const contextMenuItems = ref([
                   @disableDrag="disableDrag"
                   :opened="openedSlide === index"
                   @open="openedSlide = index"
+                  :id="id"
               />
               <PresentationControls
                   v-if="type === 'presentation'"
@@ -338,6 +342,7 @@ const contextMenuItems = ref([
                   :opened="openedSlide === index"
                   @open="openedSlide = index"
                   :max="max"
+                  :id="id"
               />
             </div>
           </AccordionContent>
